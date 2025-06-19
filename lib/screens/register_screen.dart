@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:provider/provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   final void Function()? onTap;
-  const RegisterScreen({Key? key, required this.onTap}) : super(key: key);
+  const RegisterScreen({super.key, required this.onTap});
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -27,16 +28,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       await authService.signUpWithEmailAndPassword(
-          emailController.text, passwordController.text);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        emailController.text,
+        passwordController.text,
       );
+
+      // SOLUSI: Sama seperti di login, reset navigasi setelah berhasil daftar
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Kode UI tidak berubah
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -45,7 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("Create a Noteshare Account", style: TextStyle(fontSize: 24)),
+                const Text("Create Account", style: TextStyle(fontSize: 28)),
                 const SizedBox(height: 50),
                 TextField(controller: emailController, decoration: const InputDecoration(hintText: "Email")),
                 const SizedBox(height: 10),

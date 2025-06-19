@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   final void Function()? onTap;
-  const LoginScreen({Key? key, required this.onTap}) : super(key: key);
+  const LoginScreen({super.key, required this.onTap});
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -22,17 +23,32 @@ class _LoginScreenState extends State<LoginScreen> {
         emailController.text,
         passwordController.text,
       );
+
+      // SOLUSI: Jika berhasil, hapus semua halaman sebelumnya (login, landing page)
+      // dan ganti dengan AuthGate. AuthGate akan melihat user sudah login
+      // dan langsung menampilkan HomeScreen.
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Login Failed: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Kode UI tidak berubah
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -41,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("Login to Noteshare", style: TextStyle(fontSize: 24)),
+                const Text("Welcome Back", style: TextStyle(fontSize: 28)),
                 const SizedBox(height: 50),
                 TextField(controller: emailController, decoration: const InputDecoration(hintText: "Email")),
                 const SizedBox(height: 10),

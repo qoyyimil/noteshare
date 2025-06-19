@@ -87,4 +87,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'noteshare-86d6d.firebasestorage.app',
     measurementId: 'G-TR5MYJ0465',
   );
+
 }
