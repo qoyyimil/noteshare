@@ -125,7 +125,7 @@ class _ShareDialogState extends State<ShareDialog> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: CircleAvatar(child: Text(currentUser.email?.substring(0, 1).toUpperCase() ?? 'U')),
-            title: Text('Anda (Pemilik)'),
+            title: const Text('Anda (Pemilik)'),
             subtitle: Text(currentUser.email ?? ''),
           ),
       ],

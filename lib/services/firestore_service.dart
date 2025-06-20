@@ -57,7 +57,7 @@ class FirestoreService {
         'allowed_users': FieldValue.arrayUnion([invitedUserId])
       });
       
-      return "Sukses: ${email} telah diundang untuk berkolaborasi.";
+      return "Sukses: $email telah diundang untuk berkolaborasi.";
     } catch (e) {
       return "Error: Terjadi kesalahan. ${e.toString()}";
     }

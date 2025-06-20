@@ -4,7 +4,7 @@ import 'package:noteshare/screens/home_screen.dart';
 import 'package:noteshare/screens/landing_screen.dart'; // Pastikan Anda sudah mengimpor landing screen
 
 class AuthGate extends StatelessWidget {
-  const AuthGate({Key? key}) : super(key: key);
+  const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {

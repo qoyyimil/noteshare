@@ -3,7 +3,7 @@ import 'package:noteshare/screens/login_screen.dart';
 import 'package:noteshare/screens/register_screen.dart';
 
 class LoginOrRegister extends StatefulWidget {
-  const LoginOrRegister({Key? key}) : super(key: key);
+  const LoginOrRegister({super.key});
 
   @override
   _LoginOrRegisterState createState() => _LoginOrRegisterState();
