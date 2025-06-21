@@ -7,10 +7,12 @@ class FirestoreService {
 
   late final CollectionReference notes;
   late final CollectionReference users;
+  late final CollectionReference reports; // <-- ADDED for reports
 
   FirestoreService() {
     notes = _firestore.collection('notes');
     users = _firestore.collection('users');
+    reports = _firestore.collection('reports'); // <-- ADDED for reports
   }
 
   // FUNGSI BARU: Menyimpan data pengguna ke koleksi 'users'
@@ -18,14 +20,15 @@ class FirestoreService {
     return users.doc(user.uid).set({
       'email': user.email,
       'uid': user.uid,
-    }, SetOptions(merge: true)); 
+    }, SetOptions(merge: true));
   }
 
   // CREATE: add a new note
-  Future<void> addNote(String title, String content, String category, bool isPublic) {
+  Future<void> addNote(
+      String title, String content, String category, bool isPublic) {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception("User not logged in.");
-    
+
     return notes.add({
       'title': title,
       'content': content,
@@ -35,14 +38,17 @@ class FirestoreService {
       'ownerId': currentUser.uid,
       'userEmail': currentUser.email,
       'allowed_users': [currentUser.uid],
-      'bookmarkCount': 0, // <-- NEW: Initialize bookmark count
+      'bookmarkCount': 0,
+      'likes': [], // <-- NEW: Initialize likes array
     });
   }
 
   // FUNGSI BARU: Undang pengguna ke catatan berdasarkan email
-  Future<String> inviteUserToNote({required String noteId, required String email}) async {
+  Future<String> inviteUserToNote(
+      {required String noteId, required String email}) async {
     try {
-      final querySnapshot = await users.where('email', isEqualTo: email).limit(1).get();
+      final querySnapshot =
+          await users.where('email', isEqualTo: email).limit(1).get();
 
       if (querySnapshot.docs.isEmpty) {
         return "Error: Pengguna dengan email tersebut tidak ditemukan.";
@@ -53,7 +59,7 @@ class FirestoreService {
       await notes.doc(noteId).update({
         'allowed_users': FieldValue.arrayUnion([invitedUserId])
       });
-      
+
       return "Sukses: $email telah diundang untuk berkolaborasi.";
     } catch (e) {
       return "Error: Terjadi kesalahan. ${e.toString()}";
@@ -64,7 +70,7 @@ class FirestoreService {
   Stream<QuerySnapshot> getMyNotesStream() {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) return const Stream.empty();
-    
+
     return notes
         .where('allowed_users', arrayContains: currentUser.uid)
         .orderBy('timestamp', descending: true)
@@ -73,11 +79,20 @@ class FirestoreService {
 
   // READ (Public): Ambil catatan publik
   Stream<QuerySnapshot> getPublicNotesStream() {
-    return notes.where('isPublic', isEqualTo: true).orderBy('timestamp', descending: true).snapshots();
+    return notes
+        .where('isPublic', isEqualTo: true)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  // Get a stream of a single note document for real-time updates
+  Stream<DocumentSnapshot> getNoteStream(String noteId) {
+    return notes.doc(noteId).snapshots();
   }
 
   // UPDATE: update an existing note
-  Future<void> updateNote(String docID, String newTitle, String newContent, String newCategory, bool newIsPublic) {
+  Future<void> updateNote(String docID, String newTitle, String newContent,
+      String newCategory, bool newIsPublic) {
     return notes.doc(docID).update({
       'title': newTitle,
       'content': newContent,
@@ -92,47 +107,104 @@ class FirestoreService {
     return notes.doc(docID).delete();
   }
 
-  // --- NEW BOOKMARKING AND TOP PICKS FUNCTIONS ---
+  // --- LIKE, COMMENT, AND REPORT METHODS ---
+
+  // Toggle like on a note
+  Future<void> toggleLike(String noteId, String userId, bool isLiked) {
+    if (isLiked) {
+      // Atomically remove user's ID from the 'likes' array
+      return notes.doc(noteId).update({
+        'likes': FieldValue.arrayRemove([userId])
+      });
+    } else {
+      // Atomically add user's ID to the 'likes' array
+      return notes.doc(noteId).update({
+        'likes': FieldValue.arrayUnion([userId])
+      });
+    }
+  }
+
+  // Get a stream of comments for a note, ordered by timestamp
+  Stream<QuerySnapshot> getCommentsStream(String noteId) {
+    return notes
+        .doc(noteId)
+        .collection('comments')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  // Add a new comment or reply
+  Future<void> addComment({
+    required String noteId,
+    required String text,
+    required String userId,
+    required String userEmail,
+    String? parentCommentId, // Optional: for replies
+  }) {
+    return notes.doc(noteId).collection('comments').add({
+      'text': text,
+      'userId': userId,
+      'userEmail': userEmail,
+      'timestamp': Timestamp.now(),
+      'parentCommentId': parentCommentId,
+      'likes': [], // Array of userIds who liked the comment
+    });
+  }
+
+  // Add a report for a note
+  Future<void> addReport({
+    required String noteId,
+    required String noteOwnerId,
+    required String reporterId,
+    required String reason,
+    required String details,
+  }) {
+    return reports.add({
+      'noteId': noteId,
+      'noteOwnerId': noteOwnerId,
+      'reporterId': reporterId,
+      'reason': reason,
+      'details': details,
+      'timestamp': Timestamp.now(),
+      'status': 'pending', // e.g., pending, reviewed, resolved
+    });
+  }
+
+
+  // --- BOOKMARKING AND TOP PICKS FUNCTIONS ---
 
   // Method to toggle bookmark status and update bookmarkCount
   Future<void> toggleBookmark(String noteId) async {
     final user = _auth.currentUser;
     if (user == null) {
-      print("User not logged in. Cannot bookmark.");
-      // Consider throwing an error or showing a SnackBar here
       throw Exception("User not logged in.");
     }
 
-    // Reference to the user's specific bookmark document for this note
-    final userBookmarkRef = users.doc(user.uid).collection('userBookmarks').doc(noteId);
-    // Reference to the note document
+    final userBookmarkRef =
+        users.doc(user.uid).collection('userBookmarks').doc(noteId);
     final noteRef = notes.doc(noteId);
 
     FirebaseFirestore.instance.runTransaction((transaction) async {
-      DocumentSnapshot userBookmarkSnapshot = await transaction.get(userBookmarkRef);
+      DocumentSnapshot userBookmarkSnapshot =
+          await transaction.get(userBookmarkRef);
       DocumentSnapshot noteSnapshot = await transaction.get(noteRef);
 
       if (!noteSnapshot.exists) {
         throw Exception("Note does not exist!");
       }
 
-      // Ensure bookmarkCount exists and is an integer, default to 0 if not
-      int currentBookmarkCount = (noteSnapshot.data() as Map<String, dynamic>)['bookmarkCount'] as int? ?? 0;
-
       if (userBookmarkSnapshot.exists) {
         // User has bookmarked it, so unbookmark
         transaction.delete(userBookmarkRef);
         transaction.update(noteRef, {'bookmarkCount': FieldValue.increment(-1)});
-        print("Note $noteId unbookmarked by user ${user.uid}. New count: ${currentBookmarkCount - 1}");
       } else {
         // User has not bookmarked it, so bookmark
-        transaction.set(userBookmarkRef, {'timestamp': FieldValue.serverTimestamp()});
+        transaction.set(
+            userBookmarkRef, {'timestamp': FieldValue.serverTimestamp()});
         transaction.update(noteRef, {'bookmarkCount': FieldValue.increment(1)});
-        print("Note $noteId bookmarked by user ${user.uid}. New count: ${currentBookmarkCount + 1}");
       }
     }).catchError((error) {
       print("Failed to toggle bookmark: $error");
-      // Re-throw or handle more gracefully in UI
       throw error;
     });
   }
@@ -141,9 +213,14 @@ class FirestoreService {
   Stream<bool> isNoteBookmarked(String noteId) {
     final user = _auth.currentUser;
     if (user == null) {
-      return Stream.value(false); // Return false if no user is logged in
+      return Stream.value(false);
     }
-    return users.doc(user.uid).collection('userBookmarks').doc(noteId).snapshots().map((snapshot) => snapshot.exists);
+    return users
+        .doc(user.uid)
+        .collection('userBookmarks')
+        .doc(noteId)
+        .snapshots()
+        .map((snapshot) => snapshot.exists);
   }
 
   // Stream to get Top Picks (notes ordered by bookmarkCount)
@@ -151,7 +228,8 @@ class FirestoreService {
     return notes
         .where('isPublic', isEqualTo: true)
         .orderBy('bookmarkCount', descending: true)
-        .orderBy('timestamp', descending: true) // Secondary sort for tie-breaking
+        .orderBy('timestamp',
+            descending: true) // Secondary sort for tie-breaking
         .limit(limit)
         .snapshots();
   }
@@ -163,11 +241,10 @@ class FirestoreService {
       return Stream.value([]); // Return an empty list if no user
     }
 
-    // First, get the list of note IDs bookmarked by the user
     return users
         .doc(user.uid)
         .collection('userBookmarks')
-        .orderBy('timestamp', descending: true) // Order by when they were bookmarked
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .asyncMap((bookmarkSnapshot) async {
       List<Map<String, dynamic>> bookmarkedNotes = [];
@@ -175,20 +252,12 @@ class FirestoreService {
         return bookmarkedNotes;
       }
 
-      // Collect all note IDs from bookmarks
-      List<String> bookmarkedNoteIds = bookmarkSnapshot.docs.map((doc) => doc.id).toList();
-
-      // Firestore 'in' query can handle up to 10 items. For more, you'd need multiple queries or a Cloud Function.
-      // For simplicity, let's assume limit is not an issue here for typical bookmark counts,
-      // or you can implement batching if many bookmarks are expected.
-      // If you anticipate more than 10-30 bookmarks per user, consider fetching notes one by one
-      // or implementing a more advanced querying strategy.
+      List<String> bookmarkedNoteIds =
+          bookmarkSnapshot.docs.map((doc) => doc.id).toList();
 
       if (bookmarkedNoteIds.isNotEmpty) {
-        // Fetch the actual note documents based on their IDs
-        // Note: Firestore 'whereIn' clause has a limit of 10 items.
-        // For more than 10 bookmarks, you would need to break this into multiple queries
-        // or fetch each note individually. For this example, assuming a manageable number.
+        // Firestore 'whereIn' is limited. For many bookmarks, batching is needed.
+        // This implementation fetches one by one for simplicity and robustness.
         for (String noteId in bookmarkedNoteIds) {
           final noteDoc = await notes.doc(noteId).get();
           if (noteDoc.exists) {

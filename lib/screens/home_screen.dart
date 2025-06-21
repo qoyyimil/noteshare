@@ -676,7 +676,7 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Melihat profil ${userName} (belum diimplementasikan)')),
+                SnackBar(content: Text('Melihat profil $userName (belum diimplementasikan)')),
               );
             },
             style: TextButton.styleFrom(

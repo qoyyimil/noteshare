@@ -4,11 +4,15 @@ import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:noteshare/firebase_options.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart'; // <-- Import ini
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+  await initializeDateFormatting(
+    'id_ID', null
   );
   runApp(
     ChangeNotifierProvider(
