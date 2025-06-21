@@ -27,8 +27,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
   static const Color backgroundColor = Color(0xFFF9FAFB);
-  static const Color borderColor = Color(0xFFE5E7EB); // Definisikan warna border
-
+  static const Color borderColor = Color(0xFFE5E7EB);
 
   // -- Dialog Functions --
   void _showShareDialog(BuildContext context, String title, bool isOwner) {
@@ -90,18 +89,18 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
+        backgroundColor: backgroundColor,
+        elevation: 0, 
+        shadowColor: Colors.transparent, 
+        surfaceTintColor: Colors.transparent, 
         iconTheme: const IconThemeData(color: textColor),
-        title: Text(
-          'NoteShare',
-          style: GoogleFonts.lato(color: textColor, fontWeight: FontWeight.bold),
+        title: Image.asset(
+          'assets/Logo.png',
+          height: 20,
+          errorBuilder: (context, error, stackTrace) => const Text('NoteShare'),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
+          // Ikon Search DIHILANGKAN
           IconButton(
             icon: const Icon(Icons.notifications_none, color: subtleTextColor),
             onPressed: () {},
@@ -121,7 +120,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0), // Tinggi garis
           child: Container(
-            color: borderColor, // Warna garis (bisa juga Colors.grey.shade300)
+            color: borderColor, // Warna garis
             height: 1.0, // Ketebalan garis
           ),
         ),
@@ -207,7 +206,10 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         CircleAvatar(
           radius: 24,
           backgroundColor: primaryBlue,
-          // You can add user profile image logic here later
+          child: Text(
+            firstLetter, // Menampilkan huruf pertama email
+            style: const TextStyle(color: Colors.white, fontSize: 18),
+          ),
         ),
         const SizedBox(width: 12),
         Column(
