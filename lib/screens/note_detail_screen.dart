@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart'; // Tambahkan package intl
+import 'package:intl/intl.dart';
+import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/comment_section.dart';
 import 'package:noteshare/widgets/delete_confirmation_dialog.dart';
@@ -29,7 +30,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   static const Color borderColor = Color(0xFFE5E7EB);
 
   // -- Dialog Functions --
-  void _showShareDialog(BuildContext context, String title) {
+  void _showShareDialog(BuildContext context, String title, bool isOwner) {
     final String url = "https://noteshare-86d6d.web.app/#/note/${widget.noteId}";
     showDialog(
       context: context,
@@ -37,7 +38,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         noteId: widget.noteId,
         noteTitle: title,
         shareUrl: url,
-        isOwner: true, // Asumsi, akan disesuaikan
+        isOwner: isOwner,
       ),
     );
   }
@@ -87,18 +88,20 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: textColor),
-        title: Text(
-          'NoteShare',
-          style: GoogleFonts.lato(color: textColor, fontWeight: FontWeight.bold),
+        iconTheme: const IconThemeData(color: subtleTextColor),
+        // --- FIX: Mengganti judul dengan gambar logo ---
+        title: Image.asset(
+          'assets/Logo.png',
+          height: 20,
+          errorBuilder: (context, error, stackTrace) => const Text('NoteShare'),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search, color: subtleTextColor),
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_none),
+            icon: const Icon(Icons.notifications_none, color: subtleTextColor),
             onPressed: () {},
           ),
           Padding(
@@ -150,7 +153,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                       const SizedBox(height: 32),
                       _buildAuthorFooter(data, isMyNote),
                       const SizedBox(height: 48),
-                      // Pass the comment stream to the comment section
                       StreamBuilder<QuerySnapshot>(
                         stream: commentStream,
                         builder: (context, commentSnapshot) {
@@ -159,7 +161,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                             noteId: widget.noteId,
                             firestoreService: _firestoreService,
                             currentUser: _currentUser,
-                            comments: comments, // Pass the documents
+                            comments: comments,
                           );
                         }
                       ),
@@ -192,7 +194,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         const CircleAvatar(
           radius: 24,
           backgroundColor: primaryBlue,
-          // You can add user profile image logic here later
         ),
         const SizedBox(width: 12),
         Column(
@@ -211,7 +212,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
-            child: const Text('Follow'),
+            child: const Text('Ikuti'),
           ),
       ],
     );
@@ -224,15 +225,17 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
     return Row(
       children: [
-        // Like Button
         _actionButton(
             isLikedByMe ? Icons.favorite : Icons.favorite_border,
             '$likeCount',
             isLikedByMe ? Colors.redAccent : subtleTextColor,
-            () => _firestoreService.toggleLike(widget.noteId, _currentUser!.uid, isLikedByMe)
+            () {
+              if (_currentUser != null) {
+                _firestoreService.toggleLike(widget.noteId, _currentUser!.uid, isLikedByMe);
+              }
+            }
         ),
         const SizedBox(width: 24),
-        // Comment Button - count from stream
          StreamBuilder<QuerySnapshot>(
           stream: _firestoreService.getCommentsStream(widget.noteId),
           builder: (context, snapshot) {
@@ -241,7 +244,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           }
         ),
         const Spacer(),
-        // Bookmark Button
         StreamBuilder<bool>(
           stream: _firestoreService.isNoteBookmarked(widget.noteId),
           builder: (context, snapshot) {
@@ -249,21 +251,32 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             return IconButton(
               icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
               color: isBookmarked ? primaryBlue : subtleTextColor,
-              onPressed: () => _firestoreService.toggleBookmark(widget.noteId),
+              onPressed: () {
+                 if (_currentUser != null) {
+                   _firestoreService.toggleBookmark(widget.noteId);
+                 }
+              }
             );
           },
         ),
-        // Share Button
         IconButton(
           icon: const Icon(Icons.share_outlined, color: subtleTextColor),
-          onPressed: () => _showShareDialog(context, data['title']),
+          onPressed: () => _showShareDialog(context, data['title'], isMyNote),
         ),
-        // More Options Menu
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_horiz, color: subtleTextColor),
           onSelected: (value) {
             if (value == 'delete') _showDeleteDialog();
             if (value == 'report') _showReportDialog(data['ownerId']);
+            if (value == 'edit') {
+                 Navigator.push(context, MaterialPageRoute(builder: (context) => CreateNoteScreen(
+                   docID: widget.noteId,
+                   initialTitle: data['title'],
+                   initialContent: data['content'],
+                   initialCategory: data['category'],
+                   initialIsPublic: data['isPublic'],
+                 )));
+            }
           },
           itemBuilder: (BuildContext context) {
             if (isMyNote) {
