@@ -27,7 +27,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
   static const Color backgroundColor = Color(0xFFF9FAFB);
-  static const Color borderColor = Color(0xFFE5E7EB);
+  static const Color borderColor = Color(0xFFE5E7EB); // Definisikan warna border
+
 
   // -- Dialog Functions --
   void _showShareDialog(BuildContext context, String title, bool isOwner) {
@@ -59,10 +60,13 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => DeleteConfirmationDialog(
+        title: 'Hapus Catatan',
+        content: 'Apakah Anda yakin ingin menghapus catatan ini? Tindakan ini tidak dapat dibatalkan.',
+        confirmText: 'Hapus',
         onDelete: () async {
           try {
-            Navigator.of(context).pop(); // Close dialog
-            Navigator.of(context).pop(); // Go back from detail screen
+            Navigator.of(context).pop();
+            Navigator.of(context).pop();
             await _firestoreService.deleteNote(widget.noteId);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -88,16 +92,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: subtleTextColor),
-        // --- FIX: Mengganti judul dengan gambar logo ---
-        title: Image.asset(
-          'assets/Logo.png',
-          height: 20,
-          errorBuilder: (context, error, stackTrace) => const Text('NoteShare'),
+        iconTheme: const IconThemeData(color: textColor),
+        title: Text(
+          'NoteShare',
+          style: GoogleFonts.lato(color: textColor, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: subtleTextColor),
+            icon: const Icon(Icons.search),
             onPressed: () {},
           ),
           IconButton(
@@ -115,6 +117,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             ),
           )
         ],
+        // --- Penambahan untuk outline tipis di bawah AppBar ---
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0), // Tinggi garis
+          child: Container(
+            color: borderColor, // Warna garis (bisa juga Colors.grey.shade300)
+            height: 1.0, // Ketebalan garis
+          ),
+        ),
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: _firestoreService.getNoteStream(widget.noteId),
@@ -189,17 +199,21 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         ? DateFormat.yMMMMd('id_ID').add_jm().format(timestamp)
         : 'Beberapa waktu lalu';
 
+    final String userEmail = data['userEmail'] ?? 'Pengguna Anonim';
+    final String firstLetter = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
+
     return Row(
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 24,
           backgroundColor: primaryBlue,
+          // You can add user profile image logic here later
         ),
         const SizedBox(width: 12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(data['userEmail'] ?? 'Pengguna Anonim', style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(userEmail, style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16)),
             Text(formattedTime, style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
           ],
         ),
@@ -336,14 +350,24 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   }
 
   Widget _buildAuthorFooter(Map<String, dynamic> data, bool isMyNote) {
+    final String userEmail = data['userEmail'] ?? 'Pengguna Anonim';
+    final String firstLetter = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
+
     return Row(
       children: [
-        const CircleAvatar(radius: 28, backgroundColor: primaryBlue),
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: primaryBlue,
+          child: Text(
+            firstLetter,
+            style: const TextStyle(color: Colors.white, fontSize: 20),
+          ),
+        ),
         const SizedBox(width: 16),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Ditulis oleh ${data['userEmail'] ?? 'Pengguna Anonim'}', style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Ditulis oleh $userEmail', style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16)),
             Text('0 Followers • 4k Following', style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
           ],
         ),

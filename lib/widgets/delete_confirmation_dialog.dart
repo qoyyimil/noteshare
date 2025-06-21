@@ -3,8 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 
 class DeleteConfirmationDialog extends StatelessWidget {
   final VoidCallback onDelete;
+  final String title;       
+  final String content;    
+  final String confirmText; 
 
-  const DeleteConfirmationDialog({super.key, required this.onDelete});
+  const DeleteConfirmationDialog({
+    super.key,
+    required this.onDelete,
+    this.title = 'Hapus Item',       
+    this.content = 'Apakah Anda yakin ingin menghapus item ini? Tindakan ini tidak dapat dibatalkan.', // Default value
+    this.confirmText = 'Hapus',      
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,14 +39,14 @@ class DeleteConfirmationDialog extends StatelessWidget {
           const SizedBox(height: 16),
           // Title
           Text(
-            'Hapus Catatan',
+            title, // Menggunakan parameter title
             style: GoogleFonts.lato(
                 fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
           ),
           const SizedBox(height: 8),
           // Subtitle
           Text(
-            'Apakah Anda yakin ingin menghapus catatan ini? Tindakan ini tidak dapat dibatalkan.',
+            content, // Menggunakan parameter content
             textAlign: TextAlign.center,
             style: GoogleFonts.lato(fontSize: 15, color: subtleTextColor),
           ),
@@ -62,7 +71,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  child: Text('Hapus', style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
+                  child: Text(confirmText, style: GoogleFonts.lato(fontWeight: FontWeight.bold)), // Menggunakan parameter confirmText
                 ),
               ),
             ],

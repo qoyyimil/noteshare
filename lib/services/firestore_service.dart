@@ -151,6 +151,18 @@ class FirestoreService {
     });
   }
 
+  // --- FUNGSI BARU UNTUK MENGHAPUS KOMENTAR ---
+  Future<void> deleteComment(String noteId, String commentId) async {
+    try {
+      await notes.doc(noteId).collection('comments').doc(commentId).delete();
+      print("Comment $commentId deleted successfully from note $noteId");
+    } catch (e) {
+      print("Error deleting comment $commentId from note $noteId: $e");
+      rethrow; // Re-throw the error to be handled in the UI
+    }
+  }
+
+
   // Add a report for a note
   Future<void> addReport({
     required String noteId,
