@@ -8,14 +8,14 @@ class CommentSection extends StatefulWidget {
   final String noteId;
   final FirestoreService firestoreService;
   final User? currentUser;
-  final List<QueryDocumentSnapshot> comments; // <-- Parameter baru
+  final List<QueryDocumentSnapshot> comments;
 
   const CommentSection({
     super.key,
     required this.noteId,
     required this.firestoreService,
     required this.currentUser,
-    required this.comments, // <-- Diterima di sini
+    required this.comments,
   });
 
   @override
@@ -24,52 +24,108 @@ class CommentSection extends StatefulWidget {
 
 class _CommentSectionState extends State<CommentSection> {
   final TextEditingController _commentController = TextEditingController();
+  final FocusNode _commentFocusNode = FocusNode();
+
+  // State untuk melacak balasan
+  String? _replyingToCommentId;
+  String? _replyingToUserEmail;
 
   void _postComment() {
     if (_commentController.text.trim().isEmpty || widget.currentUser == null) return;
+    
     widget.firestoreService.addComment(
       noteId: widget.noteId,
       text: _commentController.text,
       userId: widget.currentUser!.uid,
       userEmail: widget.currentUser!.email ?? 'Pengguna Anonim',
+      // Kirim parentId jika sedang membalas
+      parentCommentId: _replyingToCommentId, 
     );
+
+    // Reset state setelah mengirim
     _commentController.clear();
-    FocusScope.of(context).unfocus(); // Menutup keyboard
+    setState(() {
+      _replyingToCommentId = null;
+      _replyingToUserEmail = null;
+    });
+    FocusScope.of(context).unfocus();
+  }
+
+  void _startReply(String commentId, String userEmail) {
+    setState(() {
+      _replyingToCommentId = commentId;
+      _replyingToUserEmail = userEmail;
+    });
+    // Fokus ke input field
+    _commentFocusNode.requestFocus();
+  }
+
+  void _cancelReply() {
+    setState(() {
+      _replyingToCommentId = null;
+      _replyingToUserEmail = null;
+    });
+     FocusScope.of(context).unfocus();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Warna dari desain
-    const Color textColor = Color(0xFF1F2937);
-    const Color subtleTextColor = Color(0xFF6B7280);
-    const Color borderColor = Color(0xFFE5E7EB);
-    
+    // --- Proses data untuk memisahkan komentar dan balasan ---
+    final topLevelComments = <QueryDocumentSnapshot>[];
+    final replies = <String, List<QueryDocumentSnapshot>>{};
+
+    for (var comment in widget.comments) {
+      final data = comment.data() as Map<String, dynamic>;
+      final parentId = data['parentCommentId'] as String?;
+
+      if (parentId == null) {
+        topLevelComments.add(comment);
+      } else {
+        (replies[parentId] ??= []).add(comment);
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Judul
         Text(
           'Comments (${widget.comments.length})',
-          style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
+          style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 24),
-        
-        // Input field untuk komentar baru
         _buildCommentInputField(),
-        
         const SizedBox(height: 32),
-        
-        // Daftar komentar
         ListView.separated(
-          shrinkWrap: true, // Penting di dalam SingleChildScrollView
-          physics: const NeverScrollableScrollPhysics(), // Agar tidak ada double scrolling
-          itemCount: widget.comments.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: topLevelComments.length,
           itemBuilder: (context, index) {
-            var comment = widget.comments[index];
-            return _buildCommentTile(comment);
+            final comment = topLevelComments[index];
+            final commentReplies = replies[comment.id] ?? [];
+            return _buildCommentTree(comment, commentReplies);
           },
           separatorBuilder: (context, index) => const Divider(height: 32),
         ),
+      ],
+    );
+  }
+  
+  // Widget untuk menampilkan pohon komentar (induk + balasan)
+  Widget _buildCommentTree(DocumentSnapshot comment, List<DocumentSnapshot> replies) {
+    return Column(
+      children: [
+        _buildCommentTile(comment),
+        if (replies.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 40, top: 16),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: replies.length,
+              itemBuilder: (context, index) => _buildCommentTile(replies[index]),
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
+            ),
+          )
       ],
     );
   }
@@ -80,24 +136,27 @@ class _CommentSectionState extends State<CommentSection> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-         CircleAvatar(
-          backgroundColor: primaryBlue,
-          child: Text(
-            widget.currentUser?.email?.substring(0, 1).toUpperCase() ?? 'G',
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
+        const CircleAvatar(backgroundColor: primaryBlue),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // --- Menampilkan chip jika sedang membalas ---
+              if (_replyingToCommentId != null)
+                Chip(
+                  label: Text('Membalas @${_replyingToUserEmail ?? ''}'),
+                  onDeleted: _cancelReply,
+                  backgroundColor: Colors.blue.shade50,
+                  deleteIconColor: Colors.blue.shade700,
+                ),
               TextField(
+                focusNode: _commentFocusNode,
                 controller: _commentController,
-                maxLines: null, // Mengizinkan multi-baris
+                maxLines: null,
                 decoration: InputDecoration(
                   hintText: 'Tuliskan pemikiran Anda...',
                   border: InputBorder.none,
-                  hintStyle: GoogleFonts.lato(color: Colors.grey.shade500),
                 ),
               ),
               const Divider(),
@@ -116,14 +175,13 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   Widget _buildCommentTile(DocumentSnapshot comment) {
-    var data = comment.data() as Map<String, dynamic>;
-    const Color primaryBlue = Color(0xFF3B82F6);
+    final data = comment.data() as Map<String, dynamic>;
     const Color subtleTextColor = Color(0xFF6B7280);
     
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const CircleAvatar(backgroundColor: primaryBlue),
+        const CircleAvatar(backgroundColor: Colors.grey),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -136,21 +194,25 @@ class _CommentSectionState extends State<CommentSection> {
                     style: GoogleFonts.lato(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 8),
-                  Text('• 15 menit lalu', style: GoogleFonts.lato(color: subtleTextColor)),
+                  Text('• 5 menit lalu', style: GoogleFonts.lato(color: subtleTextColor)),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 data['text'] ?? '',
-                style: GoogleFonts.lato(fontSize: 15, color: Colors.black87, height: 1.5),
+                style: GoogleFonts.lato(fontSize: 15, height: 1.5),
               ),
               const SizedBox(height: 8),
-              IconButton(
-                icon: const Icon(Icons.reply_outlined, size: 20, color: subtleTextColor),
-                onPressed: () {
-                  // TODO: Implement reply functionality
-                },
-              )
+              // --- Tombol Balas ---
+              TextButton.icon(
+                 icon: const Icon(Icons.reply_outlined, size: 18),
+                 label: const Text('Balas'),
+                 style: TextButton.styleFrom(
+                   foregroundColor: subtleTextColor,
+                   padding: EdgeInsets.zero
+                 ),
+                 onPressed: () => _startReply(comment.id, data['userEmail']),
+              ),
             ],
           ),
         ),
