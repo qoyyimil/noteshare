@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_svg/flutter_svg.dart'; // <-- HAPUS BARIS INI
+// import 'package:flutter_svg/flutter_svg.dart';
 import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:provider/provider.dart';
+import 'package:noteshare/screens/forgot_password_screen.dart';
 
 class AuthIllustration extends StatelessWidget {
   const AuthIllustration({super.key});
@@ -100,7 +101,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text("Remember me"),
                     ],
                   ),
-                  TextButton(onPressed: () {}, child: const Text("Forgot Password")),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                      );
+                    }, child: const Text("Forgot Password")),
                 ],
               ),
               const SizedBox(height: 20),
