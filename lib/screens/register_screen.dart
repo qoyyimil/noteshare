@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_svg/flutter_svg.dart'; // <-- HAPUS BARIS INI JIKA ADA
 import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'login_screen.dart'; // Tetap import ini untuk menggunakan AuthIllustration
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final void Function()? onTap;
@@ -26,26 +25,148 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
-  final List<String> _educationLevels = ['SMA/SMK', 'Mahasiswa', 'Umum'];
+  String? _emailError;
+  String? _passwordError;
+  String? _phoneError;
+
+  final List<String> _educationLevels = [
+    'High School',
+    'College Student',
+    'General'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.addListener(_validateEmail);
+    phoneController.addListener(_validatePhone);
+    passwordController.addListener(_validatePassword);
+  }
+
+  void _validateEmail() {
+    final email = emailController.text;
+    if (email.isEmpty) {
+      setState(() => _emailError = null);
+      return;
+    }
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    setState(() {
+      _emailError = emailRegex.hasMatch(email)
+          ? null
+          : "Please enter a valid email address";
+    });
+  }
+
+  void _validatePhone() {
+    final phone = phoneController.text;
+    if (phone.isEmpty) {
+      setState(() => _phoneError = null);
+      return;
+    }
+    setState(() {
+      _phoneError = RegExp(r'^\d+$').hasMatch(phone)
+          ? null
+          : "Phone Number must contain digits only!";
+    });
+  }
+
+  void _validatePassword() {
+    final password = passwordController.text;
+    if (password.isEmpty) {
+      setState(() => _passwordError = null);
+      return;
+    }
+    final hasLetter = password.contains(RegExp(r'[A-Za-z]'));
+    final hasNumber = password.contains(RegExp(r'[0-9]'));
+    setState(() {
+      _passwordError = (password.length >= 6 && hasLetter && hasNumber)
+          ? null
+          : "Password must contain letters, numbers, and be at least 6 characters";
+    });
+  }
+
+  @override
+  void dispose() {
+    emailController.removeListener(_validateEmail);
+    phoneController.removeListener(_validatePhone);
+    passwordController.removeListener(_validatePassword);
+    super.dispose();
+  }
 
   void signUp() async {
-    if (passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords do not match!")));
+    // Validate all fields are filled
+    if (firstNameController.text.isEmpty ||
+        lastNameController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        phoneController.text.isEmpty ||
+        passwordController.text.isEmpty ||
+        confirmPasswordController.text.isEmpty ||
+        _selectedEducationLevel == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("All fields must be filled!")),
+      );
       return;
     }
+
+    // Validate email
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(emailController.text)) {
+      setState(() {
+        _emailError = "Please enter a valid email address";
+      });
+      return;
+    }
+
+    // Validate phone number is digits only
+    if (!RegExp(r'^\d+$').hasMatch(phoneController.text)) {
+      setState(() {
+        _phoneError = "Phone Number must contain digits only!";
+      });
+      return;
+    }
+
+    final password = passwordController.text;
+    final hasLetter = password.contains(RegExp(r'[A-Za-z]'));
+    final hasNumber = password.contains(RegExp(r'[0-9]'));
+    if (password.length < 6 || !hasLetter || !hasNumber) {
+      setState(() {
+        _passwordError =
+            "Password must contain letters, numbers, and be at least 6 characters";
+      });
+      return;
+    }
+
+    if (password != confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match!")),
+      );
+      return;
+    }
+
     if (!_agreeToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("You must agree to the Terms and Privacy Policies.")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("You must agree to the Terms and Privacy Policies.")),
+      );
       return;
     }
+
     final authService = Provider.of<AuthService>(context, listen: false);
     try {
-      await authService.signUpWithEmailAndPassword(emailController.text, passwordController.text);
+      await authService.signUpWithEmailAndPassword(
+          emailController.text, password);
       if (mounted) {
-        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthGate()), (route) => false);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Sign up failed: ${e.toString()}")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Sign up failed: ${e.toString()}")),
+        );
       }
     }
   }
@@ -63,66 +184,121 @@ class _RegisterScreenState extends State<RegisterScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Sign up NoteShare", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              const Text("Sign up NoteShare",
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-              Text("Ayo siapkan akunmu untuk mulai berbagi catatan.", style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+              Text("Get your account ready to start sharing notes.",
+                  style: TextStyle(fontSize: 16, color: Colors.grey)),
               const SizedBox(height: 30),
               Row(
                 children: [
-                  Expanded(child: _buildTextFormField(controller: firstNameController, label: "First Name")),
+                  Expanded(
+                      child: _buildTextFormField(
+                          controller: firstNameController,
+                          label: "First Name",
+                          requiredField: true)),
                   const SizedBox(width: 16),
-                  Expanded(child: _buildTextFormField(controller: lastNameController, label: "Last Name")),
+                  Expanded(
+                      child: _buildTextFormField(
+                          controller: lastNameController,
+                          label: "Last Name",
+                          requiredField: true)),
                 ],
+              ),
+              const SizedBox(height: 16),
+              // Email field full width
+              _buildTextFormField(
+                controller: emailController,
+                label: "Email",
+                hint: "john.doe@gmail.com",
+                requiredField: true,
+                errorText: _emailError,
+              ),
+              const SizedBox(height: 16),
+              // Phone Number field full width
+              _buildTextFormField(
+                controller: phoneController,
+                label: "Phone Number",
+                inputType: TextInputType.phone,
+                requiredField: true,
+                errorText: _phoneError,
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(child: _buildTextFormField(controller: emailController, label: "Email", hint: "john.doe@gmail.com")),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildTextFormField(controller: phoneController, label: "Phone Number", inputType: TextInputType.phone)),
+                  Text("Education Level",
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(" *", style: TextStyle(color: Colors.red)),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text("Jenjang Pendidikan", style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedEducationLevel,
-                hint: const Text("Pilih jenjang"),
-                items: _educationLevels.map((String level) => DropdownMenuItem<String>(value: level, child: Text(level))).toList(),
-                onChanged: (newValue) => setState(() => _selectedEducationLevel = newValue),
-                decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                hint: const Text("Select education level"),
+                items: _educationLevels
+                    .map((String level) => DropdownMenuItem<String>(
+                        value: level, child: Text(level)))
+                    .toList(),
+                onChanged: (newValue) =>
+                    setState(() => _selectedEducationLevel = newValue),
+                decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8))),
               ),
               const SizedBox(height: 16),
               _buildTextFormField(
-                  controller: passwordController,
-                  label: "Password",
-                  obscureText: !_isPasswordVisible,
-                  suffixIcon: IconButton(
-                    icon: Icon(_isPasswordVisible ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                  )),
+                controller: passwordController,
+                label: "Password",
+                obscureText: !_isPasswordVisible,
+                requiredField: true,
+                errorText: _passwordError,
+                suffixIcon: IconButton(
+                  icon: Icon(_isPasswordVisible
+                      ? Icons.visibility_off
+                      : Icons.visibility),
+                  onPressed: () =>
+                      setState(() => _isPasswordVisible = !_isPasswordVisible),
+                ),
+              ),
               const SizedBox(height: 16),
               _buildTextFormField(
-                  controller: confirmPasswordController,
-                  label: "Confirm Password",
-                  obscureText: !_isConfirmPasswordVisible,
-                  suffixIcon: IconButton(
-                    icon: Icon(_isConfirmPasswordVisible ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
-                  )),
+                controller: confirmPasswordController,
+                label: "Confirm Password",
+                obscureText: !_isConfirmPasswordVisible,
+                requiredField: true,
+                suffixIcon: IconButton(
+                  icon: Icon(_isConfirmPasswordVisible
+                      ? Icons.visibility_off
+                      : Icons.visibility),
+                  onPressed: () => setState(() =>
+                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                ),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Checkbox(value: _agreeToTerms, onChanged: (value) => setState(() => _agreeToTerms = value!)),
+                  Checkbox(
+                      value: _agreeToTerms,
+                      onChanged: (value) =>
+                          setState(() => _agreeToTerms = value!)),
                   Expanded(
                     child: RichText(
                       text: TextSpan(
-                        style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                        style: TextStyle(
+                            fontSize: 14, color: Colors.grey.shade700),
                         children: const [
                           TextSpan(text: "I agree to all the "),
-                          TextSpan(text: "Terms", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                          TextSpan(
+                              text: "Terms",
+                              style: TextStyle(
+                                  color: Colors.blueAccent,
+                                  fontWeight: FontWeight.bold)),
                           TextSpan(text: " and "),
-                          TextSpan(text: "Privacy Policies", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                          TextSpan(
+                              text: "Privacy Policies",
+                              style: TextStyle(
+                                  color: Colors.blueAccent,
+                                  fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -138,8 +314,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: Colors.blueAccent,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                  child: const Text("Create account", style: TextStyle(fontSize: 16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
+                  child: const Text("Create account",
+                      style: TextStyle(fontSize: 16)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -148,7 +326,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   const Text("Already have an account?"),
                   const SizedBox(width: 4),
-                  GestureDetector(onTap: widget.onTap, child: const Text("Login", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent))),
+                  GestureDetector(
+                      onTap: widget.onTap,
+                      child: const Text("Login",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueAccent))),
                 ],
               ),
             ],
@@ -159,7 +342,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       body: isDesktop
-          ? Row(children: [Expanded(flex: 2, child: registerForm), const Expanded(flex: 3, child: AuthIllustration())])
+          ? Row(children: [
+              Expanded(flex: 2, child: registerForm),
+              const Expanded(flex: 3, child: AuthIllustration())
+            ])
           : registerForm,
     );
   }
@@ -171,17 +357,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
     bool obscureText = false,
     TextInputType inputType = TextInputType.text,
     Widget? suffixIcon,
+    bool requiredField = false,
+    String? errorText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Row(
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (requiredField)
+              const Text(" *", style: TextStyle(color: Colors.red)),
+          ],
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           obscureText: obscureText,
           keyboardType: inputType,
-          decoration: InputDecoration(hintText: hint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), suffixIcon: suffixIcon),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(
+              color: Color(0xFFB0B0B0),
+              fontWeight: FontWeight.w400, 
+              fontSize: 14,
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            suffixIcon: suffixIcon,
+            errorText: errorText,
+          ),
         ),
       ],
     );

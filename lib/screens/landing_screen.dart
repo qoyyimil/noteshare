@@ -1,13 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:noteshare/auth/login_or_register.dart';
+import 'package:noteshare/screens/register_screen.dart';
+import 'package:noteshare/screens/login_screen.dart';
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
 
-  void _navigateToAuth(BuildContext context) {
+  void _navigateToRegister(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const LoginOrRegister()),
+      MaterialPageRoute(
+        builder: (context) => RegisterScreen(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LoginScreen(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RegisterScreen(onTap: () {}),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToLogin(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LoginScreen(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LoginScreen(onTap: () {}),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -25,7 +64,7 @@ class LandingScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   const Text(
+                  const Text(
                     'NoteShare',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
@@ -33,17 +72,17 @@ class LandingScreen extends StatelessWidget {
                     Row(
                       children: [
                         TextButton(
-                          onPressed: () => _navigateToAuth(context),
+                          onPressed: () => _navigateToRegister(context), // Write
                           child: const Text('Write', style: TextStyle(color: Colors.black87, fontSize: 16)),
                         ),
                         const SizedBox(width: 20),
                         TextButton(
-                          onPressed: () => _navigateToAuth(context),
+                          onPressed: () => _navigateToLogin(context), // Sign in
                           child: const Text('Sign in', style: TextStyle(color: Colors.black87, fontSize: 16)),
                         ),
                         const SizedBox(width: 20),
                         ElevatedButton(
-                          onPressed: () => _navigateToAuth(context),
+                          onPressed: () => _navigateToRegister(context), // Get Started
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blueAccent,
                             foregroundColor: Colors.white,
@@ -57,41 +96,39 @@ class LandingScreen extends StatelessWidget {
                   if (!isDesktop)
                     IconButton(
                       icon: const Icon(Icons.menu, color: Colors.black87),
-                      onPressed: () => _navigateToAuth(context),
+                      onPressed: () => _navigateToRegister(context),
                     ),
                 ],
               ),
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(30.0), 
+                padding: const EdgeInsets.all(30.0),
                 child: isDesktop
-                    ? 
-                    Row(
+                    ? Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center, 
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             flex: 2,
                             child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center, 
+                              mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: _buildLandingContent(context, isDesktop),
                             ),
                           ),
-                          const SizedBox(width: 40), 
+                          const SizedBox(width: 40),
                           Expanded(
                             flex: 3,
-                            child: _buildLandingImage(isDesktop, screenHeight), 
+                            child: _buildLandingImage(isDesktop, screenHeight),
                           ),
                         ],
                       )
-                    : 
-                    Column(
-                        mainAxisAlignment: MainAxisAlignment.center, 
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildLandingImage(isDesktop, screenHeight),
-                          const SizedBox(height: 20), 
+                          const SizedBox(height: 20),
                           ..._buildLandingContent(context, isDesktop),
                         ],
                       ),
@@ -108,18 +145,18 @@ class LandingScreen extends StatelessWidget {
       Text(
         'Write to share.\nShare to inspire.',
         style: TextStyle(
-          fontSize: isDesktop ? 56 : 40, 
+          fontSize: isDesktop ? 56 : 40,
           fontWeight: FontWeight.bold,
           color: Colors.black87,
           height: 1.2,
         ),
         textAlign: isDesktop ? TextAlign.start : TextAlign.center,
       ),
-      const SizedBox(height: 20), 
+      const SizedBox(height: 20),
       Text(
         'Where you read to learn, write to express, and connect through stories.',
         style: TextStyle(
-          fontSize: isDesktop ? 18 : 16, 
+          fontSize: isDesktop ? 18 : 16,
           color: Colors.black54,
           height: 1.5,
         ),
@@ -127,7 +164,7 @@ class LandingScreen extends StatelessWidget {
       ),
       const SizedBox(height: 30),
       ElevatedButton(
-        onPressed: () => _navigateToAuth(context),
+        onPressed: () => _navigateToRegister(context), // Start Reading
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blueAccent,
           foregroundColor: Colors.white,
@@ -142,14 +179,12 @@ class LandingScreen extends StatelessWidget {
 
   Widget _buildLandingImage(bool isDesktop, double screenHeight) {
     return isDesktop
-        ? 
-        Image.asset(
+        ? Image.asset(
             'assets/landing_page.png',
             fit: BoxFit.contain,
           )
-        : 
-        SizedBox(
-            height: screenHeight * 0.35, 
+        : SizedBox(
+            height: screenHeight * 0.35,
             child: Image.asset('assets/landing_page.png', fit: BoxFit.contain),
           );
   }
