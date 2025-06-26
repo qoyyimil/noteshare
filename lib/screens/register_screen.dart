@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'login_screen.dart'; // For AuthIllustration & LoginScreen
 
 class RegisterScreen extends StatefulWidget {
   final void Function()? onTap;
@@ -93,8 +93,102 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  void _showEmailVerificationPopup(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.4),
+      builder: (context) {
+        return Center(
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 350,
+                maxHeight: 500,
+              ),
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.blueAccent.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(20),
+                        child: const Icon(
+                          Icons.mark_email_read_rounded,
+                          size: 48,
+                          color: Colors.blueAccent,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Verify your email',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueAccent,
+                          decoration: TextDecoration.none,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'A verification link has been sent to your email address.\n\nPlease check your inbox and click the link to activate your account.',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.black87,
+                          decoration: TextDecoration.none,
+                          fontWeight: FontWeight.normal,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const LoginScreen(onTap: null),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            "OK",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void signUp() async {
-    // Validate all fields are filled
     if (firstNameController.text.isEmpty ||
         lastNameController.text.isEmpty ||
         emailController.text.isEmpty ||
@@ -108,7 +202,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // Validate email
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(emailController.text)) {
       setState(() {
@@ -117,7 +210,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // Validate phone number is digits only
     if (!RegExp(r'^\d+$').hasMatch(phoneController.text)) {
       setState(() {
         _phoneError = "Phone Number must contain digits only!";
@@ -155,12 +247,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       await authService.signUpWithEmailAndPassword(
           emailController.text, password);
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const AuthGate()),
-          (route) => false,
-        );
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+        _showEmailVerificationPopup(context);
       }
     } catch (e) {
       if (mounted) {
@@ -206,7 +297,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Email field full width
               _buildTextFormField(
                 controller: emailController,
                 label: "Email",
@@ -215,7 +305,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 errorText: _emailError,
               ),
               const SizedBox(height: 16),
-              // Phone Number field full width
               _buildTextFormField(
                 controller: phoneController,
                 label: "Phone Number",
@@ -377,11 +466,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           keyboardType: inputType,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(
-              color: Color(0xFFB0B0B0),
-              fontWeight: FontWeight.w400, 
-              fontSize: 14,
-            ),
+            hintStyle: hint != null
+                ? const TextStyle(
+                    color: Color(0xFFB0B0B0),
+                    fontWeight: FontWeight.w400,
+                    fontSize: 14,
+                  )
+                : null,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             suffixIcon: suffixIcon,
             errorText: errorText,
