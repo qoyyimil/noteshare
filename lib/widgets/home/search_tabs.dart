@@ -23,8 +23,8 @@ class SearchTabs extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         scrollDirection: Axis.horizontal,
         children: [
-          _buildSearchTabItem('Catatan'),
-          _buildSearchTabItem('Pengguna'),
+          _buildSearchTabItem('Note'),
+          _buildSearchTabItem('User'),
         ],
       ),
     );

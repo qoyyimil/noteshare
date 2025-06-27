@@ -111,14 +111,14 @@ class _ReportDialogState extends State<ReportDialog> {
             const SizedBox(height: 16),
             // Title
             Text(
-              'Laporkan Catatan',
+              'Report Note',
               style: GoogleFonts.lato(
                   fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
             ),
             const SizedBox(height: 8),
             // Subtitle
             Text(
-              'Pilih alasan mengapa Anda melaporkan konten ini.',
+              'Choose a reason for reporting this note. Your report will be reviewed by our team.',
               textAlign: TextAlign.center,
               style: GoogleFonts.lato(fontSize: 15, color: subtleTextColor),
             ),
@@ -138,8 +138,8 @@ class _ReportDialogState extends State<ReportDialog> {
             TextFormField(
               controller: _detailsController,
               decoration: InputDecoration(
-                labelText: 'Deskripsi (Opsional)',
-                hintText: 'Berikan detail lebih lanjut...',
+                labelText: 'Description (Optional)',
+                hintText: 'Give more details about your report...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: Colors.grey.shade300)
@@ -151,7 +151,7 @@ class _ReportDialogState extends State<ReportDialog> {
             // --- Checkbox syarat & ketentuan ---
             CheckboxListTile(
               title: const Text(
-                'Saya menyatakan laporan ini dibuat dengan sebenar-benarnya.',
+                'I declare that this report has been prepared truthfully.',
                 style: TextStyle(fontSize: 12),
               ),
               value: _agreedToTerms,
@@ -171,7 +171,7 @@ class _ReportDialogState extends State<ReportDialog> {
                 Expanded(
                   child: TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: Text('Batal',
+                    child: Text('Cancel',
                         style: GoogleFonts.lato(
                             color: subtleTextColor, fontWeight: FontWeight.bold)),
                   ),
@@ -193,7 +193,7 @@ class _ReportDialogState extends State<ReportDialog> {
                             height: 20,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
-                        : Text('Laporkan',
+                        : Text('Report',
                             style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
                   ),
                 ),

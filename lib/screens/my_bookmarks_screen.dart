@@ -24,7 +24,7 @@ class _MyBookmarksScreenState extends State<MyBookmarksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Catatan Disimpan', style: GoogleFonts.lato(color: textColor)),
+        title: Text('Notes saved', style: GoogleFonts.lato(color: textColor)),
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: textColor),
         elevation: 1,
@@ -41,7 +41,7 @@ class _MyBookmarksScreenState extends State<MyBookmarksScreen> {
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
               child: Text(
-                'Anda belum menyimpan catatan apapun.',
+                "You haven't saved any notes yet.",
                 style: GoogleFonts.lato(fontSize: 16, color: Colors.grey),
               ),
             );
@@ -72,13 +72,18 @@ class _MyBookmarksScreenState extends State<MyBookmarksScreen> {
   Widget _buildNoteCard(String docId, Map<String, dynamic> data) {
     final likesCount = (data['likes'] as List<dynamic>? ?? []).length;
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-    final formattedDate = timestamp != null ? DateFormat('d MMM', 'id_ID').format(timestamp) : '';
+    final formattedDate =
+        timestamp != null ? DateFormat('d MMM', 'id_ID').format(timestamp) : '';
 
     return InkWell(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => NoteDetailScreen(noteId: docId))),
+      onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => NoteDetailScreen(noteId: docId))),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24.0),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
+        decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -88,39 +93,55 @@ class _MyBookmarksScreenState extends State<MyBookmarksScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(radius: 12, backgroundColor: primaryBlue.withOpacity(0.8)),
+                      CircleAvatar(
+                          radius: 12,
+                          backgroundColor: primaryBlue.withOpacity(0.8)),
                       const SizedBox(width: 8),
-                      Text(data['userEmail'] ?? 'User', style: GoogleFonts.lato(fontSize: 14, color: textColor)),
+                      Text(data['userEmail'] ?? 'User',
+                          style:
+                              GoogleFonts.lato(fontSize: 14, color: textColor)),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     data['title'] ?? 'Tanpa Judul',
-                    style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
+                    style: GoogleFonts.lora(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: textColor),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     data['content'] ?? 'Tidak ada konten',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.lato(fontSize: 16, color: subtleTextColor, height: 1.5),
+                    style: GoogleFonts.lato(
+                        fontSize: 16, color: subtleTextColor, height: 1.5),
                   ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Text(formattedDate, style: GoogleFonts.lato(fontSize: 13, color: subtleTextColor)),
+                      Text(formattedDate,
+                          style: GoogleFonts.lato(
+                              fontSize: 13, color: subtleTextColor)),
                       const SizedBox(width: 16),
-                      Icon(Icons.favorite_border, size: 16, color: subtleTextColor),
+                      Icon(Icons.favorite_border,
+                          size: 16, color: subtleTextColor),
                       const SizedBox(width: 4),
-                      Text('$likesCount', style: GoogleFonts.lato(fontSize: 13, color: subtleTextColor)),
+                      Text('$likesCount',
+                          style: GoogleFonts.lato(
+                              fontSize: 13, color: subtleTextColor)),
                       const SizedBox(width: 16),
-                      Icon(Icons.chat_bubble_outline, size: 16, color: subtleTextColor),
+                      Icon(Icons.chat_bubble_outline,
+                          size: 16, color: subtleTextColor),
                       const SizedBox(width: 4),
                       StreamBuilder<QuerySnapshot>(
                         stream: _firestoreService.getCommentsStream(docId),
                         builder: (context, commentSnapshot) {
                           final count = commentSnapshot.data?.docs.length ?? 0;
-                          return Text(count.toString(), style: GoogleFonts.lato(fontSize: 13, color: subtleTextColor));
+                          return Text(count.toString(),
+                              style: GoogleFonts.lato(
+                                  fontSize: 13, color: subtleTextColor));
                         },
                       ),
                       const Spacer(),
@@ -141,7 +162,8 @@ class _MyBookmarksScreenState extends State<MyBookmarksScreen> {
                     width: 100,
                     height: 100,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(width: 100, height: 100, color: Colors.grey[200]),
+                    errorBuilder: (context, error, stackTrace) => Container(
+                        width: 100, height: 100, color: Colors.grey[200]),
                   ),
                 ),
               ),

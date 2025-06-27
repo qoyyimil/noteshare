@@ -35,8 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- State untuk Search & Filter ---
   final TextEditingController _searchController = TextEditingController();
   String _searchKeyword = '';
-  String _activeSearchTab = 'Catatan';
-  String _selectedCategory = 'Untuk Anda';
+  String _activeSearchTab = 'Note';
+  String _selectedCategory = 'For You';
 
   // -- UI Colors & Styles --
   static const Color primaryBlue = Color(0xFF3B82F6);
@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
 
-  final List<String> _categories = ['Untuk Anda', 'Umum', 'Fisika', 'Matematika', 'Sejarah', 'Biologi', 'Kimia'];
+  final List<String> _categories = ['For You', 'General', 'Physics', 'Mathematics', 'History', 'Biology', 'Chemistry'];
 
   @override
   void initState() {
@@ -63,8 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onSearchChanged() {
     setState(() {
       _searchKeyword = _searchController.text.trim().toLowerCase();
-      if (_searchKeyword.isNotEmpty && _activeSearchTab == 'Pengguna') {
-        _activeSearchTab = 'Catatan';
+      if (_searchKeyword.isNotEmpty && _activeSearchTab == 'user') {
+        _activeSearchTab = 'Note';
       }
     });
   }
@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchController.clear();
     setState(() {
       _searchKeyword = '';
-      _activeSearchTab = 'Catatan';
+      _activeSearchTab = 'Note';
     });
   }
 
@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fitur "$value" belum tersedia.')),
+          SnackBar(content: Text('The feature "$value" is not available yet.')),
         );
         break;
     }
@@ -160,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: _searchKeyword.isEmpty
                           ? _buildNotesList()
-                          : _activeSearchTab == 'Catatan'
+                          : _activeSearchTab == 'Note'
                               ? _buildSearchNotesList()
                               : _buildSearchPeopleList(),
                     ),
@@ -196,10 +196,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final notes = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            return _selectedCategory == 'Untuk Anda' || (data['category'] ?? '').toString().toLowerCase() == _selectedCategory.toLowerCase();
+            return _selectedCategory == 'For you' || (data['category'] ?? '').toString().toLowerCase() == _selectedCategory.toLowerCase();
         }).toList();
 
-        if (notes.isEmpty) return const Center(child: Text("Tidak ada catatan di kategori ini."));
+        if (notes.isEmpty) return const Center(child: Text("There are no notes in this category."));
 
         return ListView.builder(
           padding: const EdgeInsets.all(16.0),
@@ -231,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return title.contains(_searchKeyword) || content.contains(_searchKeyword) || userEmail.contains(_searchKeyword);
           }).toList();
 
-          if (filteredNotes.isEmpty) return const Center(child: Text("Tidak ada catatan yang cocok."));
+          if (filteredNotes.isEmpty) return const Center(child: Text("No matching notes found."));
 
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
@@ -260,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return email.contains(_searchKeyword);
           }).toList();
 
-          if (filteredUsers.isEmpty) return const Center(child: Text("Pengguna tidak ditemukan."));
+          if (filteredUsers.isEmpty) return const Center(child: Text("Users not found."));
 
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),

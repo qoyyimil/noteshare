@@ -55,7 +55,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   child: TextField(
                     controller: searchController,
                     decoration: InputDecoration(
-                      hintText: 'Cari catatan atau pengguna...',
+                      hintText: 'Search notes or users...',
                       prefixIcon: const Icon(Icons.search, size: 20, color: Colors.grey),
                       suffixIcon: searchKeyword.isNotEmpty
                           ? IconButton(
@@ -78,7 +78,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               TextButton.icon(
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateNoteScreen())),
                 icon: Icon(Icons.edit_outlined, color: subtleTextColor, size: 20),
-                label: Text('Tulis', style: GoogleFonts.lato(color: subtleTextColor)),
+                label: Text('Write', style: GoogleFonts.lato(color: subtleTextColor)),
                 style: TextButton.styleFrom(foregroundColor: Colors.grey[100]),
               ),
               const SizedBox(width: 8),
@@ -96,12 +96,12 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 itemBuilder: (context) => [
-                  const PopupMenuItem<String>(value: 'profile', child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profil'))),
-                  const PopupMenuItem<String>(value: 'library', child: ListTile(leading: Icon(Icons.bookmark_border), title: Text('Disimpan'))),
-                  const PopupMenuItem<String>(value: 'notes', child: ListTile(leading: Icon(Icons.note_alt_outlined), title: Text('Catatan Saya'))),
-                  const PopupMenuItem<String>(value: 'stats', child: ListTile(leading: Icon(Icons.bar_chart_outlined), title: Text('Statistik'))),
+                  const PopupMenuItem<String>(value: 'profile', child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profile'))),
+                  const PopupMenuItem<String>(value: 'library', child: ListTile(leading: Icon(Icons.bookmark_border), title: Text('Saved Notes'))),
+                  const PopupMenuItem<String>(value: 'notes', child: ListTile(leading: Icon(Icons.note_alt_outlined), title: Text('My Notes'))),
+                  const PopupMenuItem<String>(value: 'stats', child: ListTile(leading: Icon(Icons.bar_chart_outlined), title: Text('Statistics'))),
                   const PopupMenuDivider(),
-                  const PopupMenuItem<String>(value: 'logout', child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Keluar'))),
+                  const PopupMenuItem<String>(value: 'logout', child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Log Out'))),
                 ],
               ),
               const SizedBox(width: 16),

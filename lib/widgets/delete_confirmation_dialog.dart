@@ -10,9 +10,9 @@ class DeleteConfirmationDialog extends StatelessWidget {
   const DeleteConfirmationDialog({
     super.key,
     required this.onDelete,
-    this.title = 'Hapus Item',       
-    this.content = 'Apakah Anda yakin ingin menghapus item ini? Tindakan ini tidak dapat dibatalkan.', // Default value
-    this.confirmText = 'Hapus',      
+    this.title = 'Delete Item', // Default value    
+    this.content = 'Are you sure you want to delete this item? This action cannot be cancel.', // Default value
+    this.confirmText = 'Delete',      
   });
 
   @override
@@ -57,7 +57,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
               Expanded(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Batal', style: GoogleFonts.lato(color: subtleTextColor, fontWeight: FontWeight.bold)),
+                  child: Text('Cancel', style: GoogleFonts.lato(color: subtleTextColor, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(width: 12),

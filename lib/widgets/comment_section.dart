@@ -44,13 +44,14 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   void _postComment() {
-    if (_commentController.text.trim().isEmpty || widget.currentUser == null) return;
+    if (_commentController.text.trim().isEmpty || widget.currentUser == null)
+      return;
 
     widget.firestoreService.addComment(
       noteId: widget.noteId,
       text: _commentController.text,
       userId: widget.currentUser!.uid,
-      userEmail: widget.currentUser!.email ?? 'Pengguna Anonim',
+      userEmail: widget.currentUser!.email ?? 'Anonymous User',
       // Kirim parentId jika sedang membalas
       parentCommentId: _replyingToCommentId,
     );
@@ -78,7 +79,7 @@ class _CommentSectionState extends State<CommentSection> {
       _replyingToCommentId = null;
       _replyingToUserEmail = null;
     });
-     FocusScope.of(context).unfocus();
+    FocusScope.of(context).unfocus();
   }
 
   // --- FUNGSI BARU: Menampilkan dialog konfirmasi hapus komentar ---
@@ -89,7 +90,8 @@ class _CommentSectionState extends State<CommentSection> {
         onDelete: () async {
           try {
             Navigator.of(context).pop(); // Close dialog
-            await widget.firestoreService.deleteComment(widget.noteId, commentId);
+            await widget.firestoreService
+                .deleteComment(widget.noteId, commentId);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Komentar berhasil dihapus.'),
@@ -142,13 +144,14 @@ class _CommentSectionState extends State<CommentSection> {
           itemBuilder: (context, index) {
             final comment = topLevelComments[index];
             // Sort replies for each top-level comment
-            final commentReplies = (replies[comment.id] ?? [])..sort((a, b) {
-              final aData = a.data() as Map<String, dynamic>;
-              final bData = b.data() as Map<String, dynamic>;
-              final aTimestamp = (aData['timestamp'] as Timestamp).toDate();
-              final bTimestamp = (bData['timestamp'] as Timestamp).toDate();
-              return aTimestamp.compareTo(bTimestamp);
-            });
+            final commentReplies = (replies[comment.id] ?? [])
+              ..sort((a, b) {
+                final aData = a.data() as Map<String, dynamic>;
+                final bData = b.data() as Map<String, dynamic>;
+                final aTimestamp = (aData['timestamp'] as Timestamp).toDate();
+                final bTimestamp = (bData['timestamp'] as Timestamp).toDate();
+                return aTimestamp.compareTo(bTimestamp);
+              });
             return _buildCommentTree(comment, commentReplies);
           },
           separatorBuilder: (context, index) => const Divider(height: 32),
@@ -158,7 +161,8 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   // Widget untuk menampilkan pohon komentar (induk + balasan)
-  Widget _buildCommentTree(DocumentSnapshot comment, List<DocumentSnapshot> replies) {
+  Widget _buildCommentTree(
+      DocumentSnapshot comment, List<DocumentSnapshot> replies) {
     return Column(
       children: [
         _buildCommentTile(comment),
@@ -169,7 +173,8 @@ class _CommentSectionState extends State<CommentSection> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: replies.length,
-              itemBuilder: (context, index) => _buildCommentTile(replies[index]),
+              itemBuilder: (context, index) =>
+                  _buildCommentTile(replies[index]),
               separatorBuilder: (context, index) => const SizedBox(height: 16),
             ),
           )
@@ -180,7 +185,8 @@ class _CommentSectionState extends State<CommentSection> {
   Widget _buildCommentInputField() {
     // Get current user's email first letter for their avatar
     final String currentUserEmail = widget.currentUser?.email ?? 'U';
-    final String firstLetter = currentUserEmail.isNotEmpty ? currentUserEmail[0].toUpperCase() : 'U';
+    final String firstLetter =
+        currentUserEmail.isNotEmpty ? currentUserEmail[0].toUpperCase() : 'U';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +195,9 @@ class _CommentSectionState extends State<CommentSection> {
           backgroundColor: primaryBlue, // Use primaryBlue for consistency
           child: Text(
             firstLetter,
-            style: const TextStyle(color: Colors.white, fontSize: 16), // Adjust font size as needed
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16), // Adjust font size as needed
           ),
         ),
         const SizedBox(width: 16),
@@ -210,7 +218,7 @@ class _CommentSectionState extends State<CommentSection> {
                 controller: _commentController,
                 maxLines: null,
                 decoration: InputDecoration(
-                  hintText: 'Tuliskan pemikiran Anda...',
+                  hintText: 'kan pemikiran Anda...',
                   border: InputBorder.none,
                 ),
               ),
@@ -219,7 +227,8 @@ class _CommentSectionState extends State<CommentSection> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _postComment,
-                  child: Text('Kirim', style: GoogleFonts.lato(color: primaryBlue)),
+                  child: Text('Kirim',
+                      style: GoogleFonts.lato(color: primaryBlue)),
                 ),
               )
             ],
@@ -231,27 +240,32 @@ class _CommentSectionState extends State<CommentSection> {
 
   Widget _buildCommentTile(DocumentSnapshot comment) {
     final data = comment.data() as Map<String, dynamic>;
-    final String userEmail = data['userEmail'] ?? 'Pengguna Anonim';
-    final String firstLetter = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P'; // Default to 'P' for Pengguna
-    final String commentUserId = data['userId'] ?? ''; // ID pengguna yang membuat komentar
-    final bool isMyComment = widget.currentUser?.uid == commentUserId; // Cek apakah komentar ini milik pengguna saat ini
+    final String userEmail = data['userEmail'] ?? 'Anonymous User';
+    final String firstLetter = userEmail.isNotEmpty
+        ? userEmail[0].toUpperCase()
+        : 'P'; // Default to 'P' for Pengguna
+    final String commentUserId =
+        data['userId'] ?? ''; // ID pengguna yang membuat komentar
+    final bool isMyComment = widget.currentUser?.uid ==
+        commentUserId; // Cek apakah komentar ini milik pengguna saat ini
 
     // Get timestamp for comment
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
     // Format timestamp relative to now
-    String formattedTime = 'Beberapa waktu lalu';
+    String formattedTime = 'Seconds ago'; // Default value
     if (timestamp != null) {
       final Duration diff = DateTime.now().difference(timestamp);
       if (diff.inSeconds < 60) {
-        formattedTime = '${diff.inSeconds} detik lalu';
+        formattedTime = '${diff.inSeconds} seconds ago';
       } else if (diff.inMinutes < 60) {
-        formattedTime = '${diff.inMinutes} menit lalu';
+        formattedTime = '${diff.inMinutes} minutes ago';
       } else if (diff.inHours < 24) {
-        formattedTime = '${diff.inHours} jam lalu';
+        formattedTime = '${diff.inHours} hours ago';
       } else if (diff.inDays < 7) {
-        formattedTime = '${diff.inDays} hari lalu';
+        formattedTime = '${diff.inDays} days ago';
       } else {
-        formattedTime = DateFormat('d MMM yyyy', 'id_ID').format(timestamp); // Fallback for older comments
+        formattedTime = DateFormat('d MMM yyyy', 'id_ID')
+            .format(timestamp); // Fallback for older comments
       }
     }
 
@@ -262,7 +276,9 @@ class _CommentSectionState extends State<CommentSection> {
           backgroundColor: primaryBlue, // Use primaryBlue for consistency
           child: Text(
             firstLetter,
-            style: const TextStyle(color: Colors.white, fontSize: 16), // Adjust font size as needed
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16), // Adjust font size as needed
           ),
         ),
         const SizedBox(width: 16),
@@ -277,12 +293,14 @@ class _CommentSectionState extends State<CommentSection> {
                     style: GoogleFonts.lato(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 8),
-                  Text('• $formattedTime', style: GoogleFonts.lato(color: subtleTextColor)),
+                  Text('• $formattedTime',
+                      style: GoogleFonts.lato(color: subtleTextColor)),
                   const Spacer(), // Tambahkan Spacer
                   // --- Menu Opsi Komentar (Hanya Tampil Jika Komentar Milik Pengguna) ---
                   if (isMyComment)
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_horiz, color: subtleTextColor, size: 20),
+                      icon: const Icon(Icons.more_horiz,
+                          color: subtleTextColor, size: 20),
                       onSelected: (value) {
                         if (value == 'delete_comment') {
                           _showDeleteCommentDialog(comment.id);
@@ -292,7 +310,8 @@ class _CommentSectionState extends State<CommentSection> {
                       itemBuilder: (BuildContext context) => [
                         const PopupMenuItem<String>(
                           value: 'delete_comment',
-                          child: Text('Hapus Komentar', style: TextStyle(color: Colors.red)),
+                          child: Text('Delete Comment',
+                              style: TextStyle(color: Colors.red)),
                         ),
                       ],
                     ),
@@ -306,13 +325,11 @@ class _CommentSectionState extends State<CommentSection> {
               const SizedBox(height: 8),
               // --- Tombol Balas ---
               TextButton.icon(
-                 icon: const Icon(Icons.reply_outlined, size: 18),
-                 label: const Text('Balas'),
-                 style: TextButton.styleFrom(
-                   foregroundColor: subtleTextColor,
-                   padding: EdgeInsets.zero
-                 ),
-                 onPressed: () => _startReply(comment.id, userEmail),
+                icon: const Icon(Icons.reply_outlined, size: 18),
+                label: const Text('Reply'),
+                style: TextButton.styleFrom(
+                    foregroundColor: subtleTextColor, padding: EdgeInsets.zero),
+                onPressed: () => _startReply(comment.id, userEmail),
               ),
             ],
           ),

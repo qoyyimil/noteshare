@@ -59,9 +59,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => DeleteConfirmationDialog(
-        title: 'Hapus Catatan',
-        content: 'Apakah Anda yakin ingin menghapus catatan ini? Tindakan ini tidak dapat dibatalkan.',
-        confirmText: 'Hapus',
+        title: 'Delete Note',
+        content: 'Are you sure you want to delete this note? This action cannot be cancel.',
+        confirmText: 'Delete',
         onDelete: () async {
           try {
             Navigator.of(context).pop();
@@ -69,13 +69,13 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             await _firestoreService.deleteNote(widget.noteId);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Catatan berhasil dihapus.'),
+                  content: Text('Note succesfully deleted!.'),
                   backgroundColor: Colors.green),
             );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text('Gagal menghapus catatan: $e'),
+                  content: Text('Failed to delete note: $e'),
                   backgroundColor: Colors.red),
             );
           }
@@ -132,7 +132,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.data!.exists) {
-            return const Center(child: Text("Catatan tidak ditemukan."));
+            return const Center(child: Text("No notes found."));
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -187,7 +187,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   Widget _buildNoteTitle(Map<String, dynamic> data) {
     return Text(
-      data['title'] ?? 'Tanpa Judul',
+      data['title'] ?? 'Untitled',
       style: GoogleFonts.lora(fontSize: 42, fontWeight: FontWeight.bold, color: textColor),
     );
   }
@@ -196,9 +196,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
     final formattedTime = timestamp != null
         ? DateFormat.yMMMMd('id_ID').add_jm().format(timestamp)
-        : 'Beberapa waktu lalu';
+        : 'Seconds ago';
 
-    final String userEmail = data['userEmail'] ?? 'Pengguna Anonim';
+    final String userEmail = data['userEmail'] ?? 'Anonymous User';
     final String firstLetter = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
 
     return Row(
@@ -297,14 +297,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           itemBuilder: (BuildContext context) {
             if (isMyNote) {
               return [
-                const PopupMenuItem<String>(value: 'edit', child: Text('Edit Catatan')),
-                const PopupMenuItem<String>(value: 'stats', child: Text('Lihat Statistik')),
-                const PopupMenuItem<String>(value: 'delete', child: Text('Hapus Catatan', style: TextStyle(color: Colors.red))),
+                const PopupMenuItem<String>(value: 'edit', child: Text('Edit Note')),
+                const PopupMenuItem<String>(value: 'stats', child: Text('View Statistics')),
+                const PopupMenuItem<String>(value: 'delete', child: Text('Delete Note', style: TextStyle(color: Colors.red))),
               ];
             } else {
               return [
-                const PopupMenuItem<String>(value: 'mute', child: Text('Sembunyikan penulis ini')),
-                const PopupMenuItem<String>(value: 'report', child: Text('Laporkan Catatan', style: TextStyle(color: Colors.red))),
+                const PopupMenuItem<String>(value: 'mute', child: Text('Hide this author')),
+                const PopupMenuItem<String>(value: 'report', child: Text('Report Note', style: TextStyle(color: Colors.red))),
               ];
             }
           },
@@ -352,7 +352,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   }
 
   Widget _buildAuthorFooter(Map<String, dynamic> data, bool isMyNote) {
-    final String userEmail = data['userEmail'] ?? 'Pengguna Anonim';
+    final String userEmail = data['userEmail'] ?? 'Anonymous User';
     final String firstLetter = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
 
     return Row(
@@ -369,7 +369,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Ditulis oleh $userEmail', style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Written by $userEmail', style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16)),
             Text('0 Followers • 4k Following', style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
           ],
         ),

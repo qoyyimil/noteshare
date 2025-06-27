@@ -20,7 +20,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (_emailController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text("Email tidak boleh kosong."),
+            content: Text("Email cannot be empty."),
             backgroundColor: Colors.orange),
       );
       return;
@@ -37,9 +37,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           barrierDismissible: false,
           builder: (BuildContext dialogContext) {
             return SuccessDialog(
-              title: "Cek Email Anda",
-              description: "Kami telah mengirimkan instruksi pemulihan kata sandi ke email Anda.",
-              buttonText: "Mengerti",
+              title: "Check your email",
+              description: "We have sent a password reset link to your email. Please check your inbox and follow the instructions to reset your password.",
+              buttonText: "Got it",
               onOkPressed: () {
                 Navigator.of(dialogContext).pop();
               },
@@ -53,7 +53,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text("Gagal mengirim link: ${e.toString()}"),
+              content: Text("Failed to send link: ${e.toString()}"),
               backgroundColor: Colors.red),
         );
       }

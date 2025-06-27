@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const Text("Login", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-              Text("Selamat datang kembali! Masuk untuk melanjutkan.", style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+              Text("Welcome back! Login to continue.", style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
               const SizedBox(height: 40),
               const Text("Email", style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),

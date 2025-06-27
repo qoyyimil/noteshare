@@ -51,7 +51,7 @@ class FirestoreService {
           await users.where('email', isEqualTo: email).limit(1).get();
 
       if (querySnapshot.docs.isEmpty) {
-        return "Error: Pengguna dengan email tersebut tidak ditemukan.";
+        return "Error: User with email $email not found.";
       }
 
       final invitedUserId = querySnapshot.docs.first.id;
@@ -60,9 +60,9 @@ class FirestoreService {
         'allowed_users': FieldValue.arrayUnion([invitedUserId])
       });
 
-      return "Sukses: $email telah diundang untuk berkolaborasi.";
+      return "Success: $email have been invited to collaborate.";
     } catch (e) {
-      return "Error: Terjadi kesalahan. ${e.toString()}";
+      return "Error: An error occured. ${e.toString()}";
     }
   }
 

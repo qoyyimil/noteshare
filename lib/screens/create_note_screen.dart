@@ -34,7 +34,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   static const Color bgColor = Color(0xFFFFFFFF);
 
   bool _isPublic = true;
-  final List<String> _categories = ['Umum', 'Fisika', 'Matematika', 'Biologi', 'Kimia', 'Sejarah'];
+  final List<String> _categories = ['General', 'Physics', 'Mathematics', 'Biology', 'Chemistry', 'History'];
   String? _selectedCategory;
   bool get isEditing => widget.docID != null;
   bool _isPublishing = false;
@@ -55,7 +55,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   Future<void> _publishNote() async {
     if (titleController.text.trim().isEmpty || contentController.text.trim().isEmpty || _selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Judul dan konten tidak boleh kosong.'), backgroundColor: Colors.orange),
+        const SnackBar(content: Text('The title and content must not be empty..'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -71,7 +71,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal menyimpan: ${e.toString()}"), backgroundColor: Colors.red),
+        SnackBar(content: Text("Failed to save: ${e.toString()}"), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -92,7 +92,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          isEditing ? "Edit Catatan" : "Tulis Catatan Baru",
+          isEditing ? "Edit Note" : "Create New Note",
           style: GoogleFonts.lato(color: textColor, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -107,7 +107,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
               ),
               child: _isPublishing
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2,))
-                  : Text(isEditing ? 'Perbarui' : 'Terbitkan'),
+                  : Text(isEditing ? 'Update' : 'Publish'),
             ),
           ),
         ],
@@ -127,7 +127,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
                   controller: titleController,
                   decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: 'Judul Catatan Anda...',
+                    hintText: 'Your Note Title',
                     hintStyle: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey.shade400),
                   ),
                   style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: textColor),
@@ -138,7 +138,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
                   controller: contentController,
                   decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: 'Mulai menulis di sini...',
+                    hintText: 'Start writing your note here...',
                     hintStyle: GoogleFonts.sourceSerif4(fontSize: 18, color: Colors.grey.shade400),
                   ),
                   style: GoogleFonts.sourceSerif4(fontSize: 18, height: 1.6, color: textColor),
@@ -183,7 +183,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
             ),
           ),
           const VerticalDivider(width: 20),
-          Text('Publik', style: GoogleFonts.lato(color: subtleTextColor)),
+          Text('Public', style: GoogleFonts.lato(color: subtleTextColor)),
           const SizedBox(width: 8),
           Switch(
             value: _isPublic,

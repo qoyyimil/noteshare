@@ -41,7 +41,7 @@ class _ShareDialogState extends State<ShareDialog> {
     if (mounted) {
       setState(() { _isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
-      if (result.startsWith("Sukses")) {
+      if (result.startsWith("Success")) {
         _emailController.clear();
       }
     }
@@ -63,7 +63,7 @@ class _ShareDialogState extends State<ShareDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bagikan "${widget.noteTitle}"',
+                    'Share "${widget.noteTitle}"',
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -82,19 +82,19 @@ class _ShareDialogState extends State<ShareDialog> {
                     children: [
                       OutlinedButton.icon(
                         icon: const Icon(Icons.copy_all_outlined, size: 18),
-                        label: const Text('Salin Link'),
+                        label: const Text('Copy Link'),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: widget.shareUrl)).then((_) {
                             Navigator.of(context).pop();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Link disalin ke clipboard!')),
+                              const SnackBar(content: Text('Link copied to clipboard!')),
                             );
                           });
                         },
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Selesai'),
+                        child: const Text('Done'),
                       ),
                     ],
                   ),
@@ -113,7 +113,7 @@ class _ShareDialogState extends State<ShareDialog> {
         TextField(
           controller: _emailController,
           decoration: InputDecoration(
-            hintText: 'Tambahkan email pengguna untuk diundang',
+            hintText: 'Add user email to invite',
             suffixIcon: IconButton(
               icon: const Icon(Icons.send),
               onPressed: _handleInvite,
@@ -125,7 +125,7 @@ class _ShareDialogState extends State<ShareDialog> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: CircleAvatar(child: Text(currentUser.email?.substring(0, 1).toUpperCase() ?? 'U')),
-            title: const Text('Anda (Pemilik)'),
+            title: const Text('You (Owner)'),
             subtitle: Text(currentUser.email ?? ''),
           ),
       ],
@@ -145,7 +145,7 @@ class _ShareDialogState extends State<ShareDialog> {
           const Icon(Icons.link, size: 40, color: Colors.blueAccent),
           const SizedBox(height: 16),
           const Text(
-            'Bagikan link ini',
+            'Share this link',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
           ),
