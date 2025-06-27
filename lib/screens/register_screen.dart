@@ -417,7 +417,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(width: 4),
                   GestureDetector(
                       onTap: widget.onTap,
-                      child: const Text("Login",
+                      child: const Text("Sign in",
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.blueAccent))),

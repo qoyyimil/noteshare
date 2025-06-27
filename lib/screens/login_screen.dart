@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
 import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:provider/provider.dart';
@@ -15,7 +14,7 @@ class AuthIllustration extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(50.0),
-          child: Image.asset( // <-- Gunakan Image.asset
+          child: Image.asset(
             'assets/landing_page.png',
             fit: BoxFit.contain,
           ),
@@ -38,18 +37,41 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _isPasswordVisible = false;
+  String? _errorText;
+  bool _loading = false;
 
   void signIn() async {
+    setState(() {
+      _errorText = null;
+      _loading = true;
+    });
+
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        _errorText = "Email and password must be filled!";
+        _loading = false;
+      });
+      return;
+    }
+
     final authService = Provider.of<AuthService>(context, listen: false);
     try {
-      await authService.signInWithEmailAndPassword(emailController.text, passwordController.text);
+      await authService.signInWithEmailAndPassword(email, password);
       if (mounted) {
-        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthGate()), (route) => false);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
+        );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Login Failed: ${e.toString()}"), backgroundColor: Colors.red));
-      }
+      setState(() {
+        _errorText = "Login Failed: ${e.toString()}";
+        _loading = false;
+      });
     }
   }
 
@@ -74,7 +96,16 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: emailController,
-                decoration: InputDecoration(hintText: "john.doe@gmail.com", border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  hintText: "john.doe@gmail.com",
+                  hintStyle: TextStyle(
+                    color: Color(0xFFB0B0B0),
+                    fontWeight: FontWeight.w400,
+                    fontSize: 14,
+                  ),
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 20),
               const Text("Password", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -83,7 +114,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: passwordController,
                 obscureText: !_isPasswordVisible,
                 decoration: InputDecoration(
-                  hintText: "••••••••••••",
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   suffixIcon: IconButton(
                     icon: Icon(_isPasswordVisible ? Icons.visibility_off : Icons.visibility),
@@ -107,20 +137,36 @@ class _LoginScreenState extends State<LoginScreen> {
                         context,
                         MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
                       );
-                    }, child: const Text("Forgot Password")),
+                    },
+                    child: const Text("Forgot Password"),
+                  ),
                 ],
               ),
+              if (_errorText != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorText!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ],
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: signIn,
+                  onPressed: _loading ? null : signIn,
                   style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                  child: const Text("Login", style: TextStyle(fontSize: 16)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: _loading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text("Login", style: TextStyle(fontSize: 16)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -129,9 +175,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Text("Don't have an account?"),
                   const SizedBox(width: 4),
-                  GestureDetector(onTap: widget.onTap, child: const Text("Sign up", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent))),
+                  GestureDetector(
+                    onTap: widget.onTap,
+                    child: const Text("Sign up", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                  ),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -140,7 +189,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: isDesktop
-          ? Row(children: [Expanded(flex: 2, child: loginForm), const Expanded(flex: 3, child: AuthIllustration())])
+          ? Row(children: [
+              Expanded(flex: 2, child: loginForm),
+              const Expanded(flex: 3, child: AuthIllustration()),
+            ])
           : loginForm,
     );
   }
