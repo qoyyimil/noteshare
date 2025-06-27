@@ -46,6 +46,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     fullNameController.text = data['fullName'] ?? '';
     emailController.text = data['email'] ?? '';
     phoneController.text = data['phone'] ?? '';
+    phoneController.text = data['phoneNumber'] ?? '';
     educationController.text = data['educationLevel'] ?? '';
     birthDateController.text = data['birthDate'] ?? '';
     aboutController.text = data['about'] ?? '';
@@ -70,15 +71,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _saveProfile() async {
     setState(() => _saving = true);
     try {
+      
+      // Update email di Firebase Auth jika berubah
+      if (emailController.text.trim() != currentUser!.email) {
+        await currentUser!.updateEmail(emailController.text.trim());
+      }
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser!.uid)
           .update({
         'fullName': fullNameController.text.trim(),
-        'phone': phoneController.text.trim(),
+        'phoneNumber': phoneController.text.trim(),
         'educationLevel': educationController.text.trim(),
         'birthDate': birthDateController.text.trim(),
         'about': aboutController.text.trim(),
+        'email': emailController.text.trim(), // update email di Firestore juga
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,7 +110,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         searchController: searchController,
         searchKeyword: '',
         onClearSearch: () {},
-        onMenuItemSelected: (value, context) {},
+        // onMenuItemSelected: (value, context) {},
         currentUser: currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
@@ -214,7 +222,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _profileField("Email", emailController, enabled: false),
+                              _profileField("Email", emailController, enabled: true),
                               const SizedBox(height: 24),
                               _profileField("Phone Number", phoneController),
                               const SizedBox(height: 24),

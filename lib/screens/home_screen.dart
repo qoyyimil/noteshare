@@ -147,7 +147,6 @@ class _HomeScreenState extends State<HomeScreen> {
         searchController: _searchController,
         searchKeyword: _searchKeyword,
         onClearSearch: _clearSearch,
-        onMenuItemSelected: _onMenuItemSelected,
         currentUser: currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,

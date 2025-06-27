@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:noteshare/screens/note_detail_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/widgets/home/home_app_bar.dart';
 
 class MyBookmarksScreen extends StatefulWidget {
   const MyBookmarksScreen({super.key});
@@ -14,20 +16,45 @@ class MyBookmarksScreen extends StatefulWidget {
 
 class _MyBookmarksScreenState extends State<MyBookmarksScreen> {
   final FirestoreService _firestoreService = FirestoreService();
+  final TextEditingController _searchController = TextEditingController();
+  final User? _currentUser = FirebaseAuth.instance.currentUser;
 
   // -- UI Colors & Styles from HomeScreen --
   static const Color primaryBlue = Color(0xFF3B82F6);
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
+  static const Color bgColor = Color(0xFFFFFFFF);
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {}); // Update UI when search text changes
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onClearSearch() {
+    _searchController.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Notes saved', style: GoogleFonts.lato(color: textColor)),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: textColor),
-        elevation: 1,
+      backgroundColor: bgColor,
+      appBar: HomeAppBar(
+        searchController: _searchController,
+        searchKeyword: _searchController.text,
+        onClearSearch: _onClearSearch,
+        currentUser: _currentUser,
+        primaryBlue: primaryBlue,
+        subtleTextColor: subtleTextColor,
+        sidebarBgColor: bgColor,
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _firestoreService.getUserBookmarksStream(),

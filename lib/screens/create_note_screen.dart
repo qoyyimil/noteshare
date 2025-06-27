@@ -155,7 +155,6 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
         searchController: _searchController,
         searchKeyword: _searchController.text,
         onClearSearch: _onClearSearch,
-        onMenuItemSelected: _onMenuItemSelected,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,

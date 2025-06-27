@@ -134,7 +134,6 @@ class _ProfilePageState extends State<ProfilePage> {
         onClearSearch: () {
           searchController.clear();
         },
-        onMenuItemSelected: (value, context) {},
         currentUser: currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: const Color(0xFF6B7280),

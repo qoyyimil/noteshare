@@ -111,7 +111,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   Future<void> _onFollowButtonPressed() async {
     if (_currentUser == null || widget.userId == _currentUser!.uid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak dapat mengikuti diri sendiri!')),
+        const SnackBar(content: Text("Cannot follow yourself!")),
       );
       return;
     }
@@ -136,8 +136,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isFollowing
-                ? 'Berhasil mengikuti $_profileUserName'
-                : 'Berhenti mengikuti $_profileUserName'),
+                ? 'Start following $_profileUserName'
+                : 'Stop following $_profileUserName'),
             backgroundColor: Colors.green,
           ),
         );
@@ -150,7 +150,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal melakukan aksi follow: $e'),
+            content: Text('Failed to follow/unfollow: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -177,7 +177,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         searchController: _searchController,
         searchKeyword: _searchController.text,
         onClearSearch: _onClearSearch,
-        onMenuItemSelected: _onMenuItemSelected,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,

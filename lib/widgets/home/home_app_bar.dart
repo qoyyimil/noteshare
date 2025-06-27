@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/screens/home_screen.dart';
+import 'package:noteshare/screens/profile.dart';
+import 'package:noteshare/screens/my_bookmarks_screen.dart';
+import 'package:noteshare/screens/my_notes_screen.dart';
+import 'package:noteshare/screens/login_screen.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchController;
   final String searchKeyword;
   final VoidCallback onClearSearch;
-  final Function(String, BuildContext) onMenuItemSelected;
   final User? currentUser;
   final Color primaryBlue;
   final Color subtleTextColor;
@@ -19,12 +22,37 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.searchController,
     required this.searchKeyword,
     required this.onClearSearch,
-    required this.onMenuItemSelected,
     required this.currentUser,
     required this.primaryBlue,
     required this.subtleTextColor,
     required this.sidebarBgColor,
   });
+
+  void _onMenuItemSelected(String value, BuildContext context) async {
+    if (value == 'profile') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfilePage()),
+      );
+    } else if (value == 'library') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyBookmarksScreen()),
+      );
+    } else if (value == 'notes') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyNotesScreen()),
+      );
+    } else if (value == 'logout') {
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen(onTap: null)),
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +151,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const SizedBox(width: 8),
               PopupMenuButton<String>(
-                onSelected: (value) => onMenuItemSelected(value, context),
+                onSelected: (value) => _onMenuItemSelected(value, context),
                 offset: const Offset(0, 40),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -139,7 +167,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     value: 'library',
                     child: ListTile(
                       leading: Icon(Icons.bookmark_border),
-                      title: Text('Saved Notes'),
+                      title: Text('Library'),
                     ),
                   ),
                   const PopupMenuItem<String>(

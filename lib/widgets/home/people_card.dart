@@ -50,7 +50,7 @@ class PeopleCard extends StatelessWidget {
                         fontWeight: FontWeight.bold))),
             OutlinedButton(
               onPressed: () {/* TODO: Implement follow logic */},
-              child: const Text('Ikuti'),
+              child: const Text('Follow'),
               style: OutlinedButton.styleFrom(
                   foregroundColor: subtleTextColor,
                   side: const BorderSide(color: Color(0xFFE5E7EB)),

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:provider/provider.dart';
@@ -90,6 +91,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     emailController.removeListener(_validateEmail);
     phoneController.removeListener(_validatePhone);
     passwordController.removeListener(_validatePassword);
+    firstNameController.dispose();
+    lastNameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -188,6 +195,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Future<void> _saveUsertoFirestore({
+    required String uid,
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String phoneNumber,
+    required String educationLevel,
+  }) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .set({
+      'firstName': firstName,
+      'lastName': lastName,
+      'fullName': '$firstName $lastName',
+      'email': email,
+      'phoneNumber': phoneNumber,
+      'educationLevel': educationLevel,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   void signUp() async {
     if (firstNameController.text.isEmpty ||
         lastNameController.text.isEmpty ||
@@ -249,9 +278,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           emailController.text, password);
 
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null && !user.emailVerified) {
-        await user.sendEmailVerification();
-        _showEmailVerificationPopup(context);
+      if (user != null) {
+        // Simpan data user ke Firestore
+        await _saveUsertoFirestore(
+          uid: user.uid,
+          firstName: firstNameController.text,
+          lastName: lastNameController.text,
+          email: emailController.text,
+          phoneNumber: phoneController.text,
+          educationLevel: _selectedEducationLevel!,
+        );
+        if (!user.emailVerified) {
+          await user.sendEmailVerification();
+          _showEmailVerificationPopup(context);
+        }
       }
     } catch (e) {
       if (mounted) {

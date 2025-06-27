@@ -107,7 +107,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         searchController: _searchController,
         searchKeyword: _searchController.text,
         onClearSearch: _onClearSearch,
-        onMenuItemSelected: _onMenuItemSelected,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
