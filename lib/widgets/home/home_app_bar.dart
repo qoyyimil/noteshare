@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
+import 'package:noteshare/screens/home_screen.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchController;
@@ -41,16 +42,27 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Image.asset(
-                  'assets/Logo.png',
-                  height: 22,
-                  errorBuilder: (context, error, stackTrace) => Text(
-                    'NoteShare',
-                    style: TextStyle(
-                      color: primaryBlue,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      letterSpacing: 0.5,
+                child: GestureDetector(
+                  onTap: () {
+                    // Navigate to home screen when logo is tapped
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const HomeScreen()),
+                      (route) => false,
+                    );
+                  },
+                  child: Image.asset(
+                    'assets/Logo.png',
+                    height: 22,
+                    errorBuilder: (context, error, stackTrace) => Text(
+                      'NoteShare',
+                      style: TextStyle(
+                        color: primaryBlue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
@@ -65,16 +77,19 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     decoration: InputDecoration(
                       hintText: 'Search notes or users...',
                       hintStyle: TextStyle(color: subtleTextColor),
-                      prefixIcon: const Icon(Icons.search, size: 20, color: Colors.grey),
+                      prefixIcon: const Icon(Icons.search,
+                          size: 20, color: Colors.grey),
                       suffixIcon: searchKeyword.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
+                              icon: const Icon(Icons.clear,
+                                  size: 20, color: Colors.grey),
                               onPressed: onClearSearch,
                             )
                           : null,
                       filled: true,
                       fillColor: sidebarBgColor,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 0, horizontal: 0),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -87,13 +102,17 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               TextButton.icon(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CreateNoteScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const CreateNoteScreen()),
                 ),
-                icon: Icon(Icons.edit_outlined, color: subtleTextColor, size: 20),
-                label: Text('Write', style: GoogleFonts.lato(color: subtleTextColor)),
+                icon:
+                    Icon(Icons.edit_outlined, color: subtleTextColor, size: 20),
+                label: Text('Write',
+                    style: GoogleFonts.lato(color: subtleTextColor)),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.grey[100],
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
               const SizedBox(width: 8),
@@ -106,7 +125,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               PopupMenuButton<String>(
                 onSelected: (value) => onMenuItemSelected(value, context),
                 offset: const Offset(0, 40),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 itemBuilder: (context) => [
                   const PopupMenuItem<String>(
                     value: 'profile',
@@ -152,7 +172,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     (currentUser?.email?.isNotEmpty ?? false)
                         ? currentUser!.email![0].toUpperCase()
                         : 'U',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

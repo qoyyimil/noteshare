@@ -9,6 +9,7 @@ import 'package:noteshare/widgets/comment_section.dart';
 import 'package:noteshare/widgets/delete_confirmation_dialog.dart';
 import 'package:noteshare/widgets/report_dialog.dart';
 import 'package:noteshare/widgets/share_dialog.dart';
+import 'package:noteshare/widgets/home/home_app_bar.dart';
 
 class NoteDetailScreen extends StatefulWidget {
   final String noteId;
@@ -21,22 +22,18 @@ class NoteDetailScreen extends StatefulWidget {
 class _NoteDetailScreenState extends State<NoteDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
-
-  // Follow state
-  bool _isFollowing = false;
-  bool _isFollowLoading = false;
-  String? _noteOwnerId;
+  final TextEditingController _searchController = TextEditingController();
 
   // -- Warna dari Desain --
   static const Color primaryBlue = Color(0xFF3B82F6);
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
   static const Color backgroundColor = Color(0xFFF9FAFB);
-  static const Color borderColor = Color(0xFFE5E7EB);
 
   // -- Dialog Functions --
   void _showShareDialog(BuildContext context, String title, bool isOwner) {
-    final String url = "https://noteshare-86d6d.web.app/#/note/${widget.noteId}";
+    final String url =
+        "https://noteshare-86d6d.web.app/#/note/${widget.noteId}";
     showDialog(
       context: context,
       builder: (context) => ShareDialog(
@@ -65,7 +62,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       context: context,
       builder: (context) => DeleteConfirmationDialog(
         title: 'Delete Note',
-        content: 'Are you sure you want to delete this note? This action cannot be cancel.',
+        content:
+            'Are you sure you want to delete this note? This action cannot be cancel.',
         confirmText: 'Delete',
         onDelete: () async {
           try {
@@ -90,95 +88,65 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    // Tidak perlu load ownerId di initState, ownerId diambil dari data note di builder
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
-  Future<void> _handleFollow(String ownerId) async {
-    if (_currentUser == null || ownerId == _currentUser!.uid) return;
-    
-    setState(() { _isFollowLoading = true; });
-    
-    try {
-      await _firestoreService.toggleFollowUser(ownerId);
-      
-      // Cek status follow terbaru
-      final isFollowing = await _firestoreService.isFollowingUser(ownerId).first;
-      
-      if (mounted) {
-        setState(() {
-          _isFollowing = isFollowing;
-          _isFollowLoading = false;
-        });
-        
-        // Tampilkan notifikasi berhasil
+  void _onClearSearch() {
+    _searchController.clear();
+  }
+
+  void _onMenuItemSelected(String value, BuildContext context) {
+    switch (value) {
+      case 'profile':
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isFollowing ? 'You are now following this user' : 'You have unfollowed this user'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
+          const SnackBar(content: Text('Profile feature not available yet.')),
         );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isFollowLoading = false;
-        });
-        
-        // Tampilkan notifikasi error
+        break;
+      case 'library':
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to follow/unfollow user: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
+          const SnackBar(content: Text('Library feature not available yet.')),
         );
-      }
+        break;
+      case 'notes':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('My Notes feature not available yet.')),
+        );
+        break;
+      case 'logout':
+        Navigator.pop(context);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('The feature "$value" is not available yet.')),
+        );
+        break;
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {}); // Update UI when search text changes
+    });
+    // Tidak perlu load ownerId di initState, ownerId diambil dari data note di builder
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBar(
-        backgroundColor: backgroundColor,
-        elevation: 0, 
-        shadowColor: Colors.transparent, 
-        surfaceTintColor: Colors.transparent, 
-        iconTheme: const IconThemeData(color: textColor),
-        title: Image.asset(
-          'assets/Logo.png',
-          height: 20,
-          errorBuilder: (context, error, stackTrace) => const Text('NoteShare'),
-        ),
-        actions: [
-          // Ikon Search DIHILANGKAN
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: subtleTextColor),
-            onPressed: () {},
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: CircleAvatar(
-              backgroundColor: primaryBlue,
-              child: Text(
-                _currentUser?.email?.substring(0, 1).toUpperCase() ?? 'G',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          )
-        ],
-        // --- Penambahan untuk outline tipis di bawah AppBar ---
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0), // Tinggi garis
-          child: Container(
-            color: borderColor, // Warna garis
-            height: 1.0, // Ketebalan garis
-          ),
-        ),
+      appBar: HomeAppBar(
+        searchController: _searchController,
+        searchKeyword: _searchController.text,
+        onClearSearch: _onClearSearch,
+        onMenuItemSelected: _onMenuItemSelected,
+        currentUser: _currentUser,
+        primaryBlue: primaryBlue,
+        subtleTextColor: subtleTextColor,
+        sidebarBgColor: backgroundColor,
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: _firestoreService.getNoteStream(widget.noteId),
@@ -192,7 +160,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
           final bool isMyNote = data['ownerId'] == _currentUser?.uid;
-          final commentStream = _firestoreService.getCommentsStream(widget.noteId);
+          final commentStream =
+              _firestoreService.getCommentsStream(widget.noteId);
 
           return SingleChildScrollView(
             child: Center(
@@ -218,17 +187,16 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                       _buildAuthorFooter(data, isMyNote),
                       const SizedBox(height: 48),
                       StreamBuilder<QuerySnapshot>(
-                        stream: commentStream,
-                        builder: (context, commentSnapshot) {
-                           final comments = commentSnapshot.data?.docs ?? [];
-                          return CommentSection(
-                            noteId: widget.noteId,
-                            firestoreService: _firestoreService,
-                            currentUser: _currentUser,
-                            comments: comments,
-                          );
-                        }
-                      ),
+                          stream: commentStream,
+                          builder: (context, commentSnapshot) {
+                            final comments = commentSnapshot.data?.docs ?? [];
+                            return CommentSection(
+                              noteId: widget.noteId,
+                              firestoreService: _firestoreService,
+                              currentUser: _currentUser,
+                              comments: comments,
+                            );
+                          }),
                     ],
                   ),
                 ),
@@ -243,7 +211,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   Widget _buildNoteTitle(Map<String, dynamic> data) {
     return Text(
       data['title'] ?? 'Untitled',
-      style: GoogleFonts.lora(fontSize: 42, fontWeight: FontWeight.bold, color: textColor),
+      style: GoogleFonts.lora(
+          fontSize: 42, fontWeight: FontWeight.bold, color: textColor),
     );
   }
 
@@ -254,7 +223,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         : 'Seconds ago';
 
     final String userEmail = data['userEmail'] ?? 'Anonymous User';
-    final String firstLetter = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
+    final String firstLetter =
+        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
 
     return Row(
       children: [
@@ -270,8 +240,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(userEmail, style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16)),
-            Text(formattedTime, style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+            Text(userEmail,
+                style: GoogleFonts.lato(
+                    fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(formattedTime,
+                style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
           ],
         ),
         const Spacer(),
@@ -281,7 +254,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
             ),
             child: const Text('Follow'),
           ),
@@ -296,38 +270,35 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
     return Row(
       children: [
-        _actionButton(
-            isLikedByMe ? Icons.favorite : Icons.favorite_border,
-            '$likeCount',
-            isLikedByMe ? Colors.redAccent : subtleTextColor,
-            () {
-              if (_currentUser != null) {
-                _firestoreService.toggleLike(widget.noteId, _currentUser!.uid, isLikedByMe);
-              }
-            }
-        ),
-        const SizedBox(width: 24),
-         StreamBuilder<QuerySnapshot>(
-          stream: _firestoreService.getCommentsStream(widget.noteId),
-          builder: (context, snapshot) {
-            final int commentCount = snapshot.data?.docs.length ?? 0;
-            return _actionButton(Icons.chat_bubble_outline, '$commentCount', subtleTextColor, () {});
+        _actionButton(isLikedByMe ? Icons.favorite : Icons.favorite_border,
+            '$likeCount', isLikedByMe ? Colors.redAccent : subtleTextColor, () {
+          if (_currentUser != null) {
+            _firestoreService.toggleLike(
+                widget.noteId, _currentUser!.uid, isLikedByMe);
           }
-        ),
+        }),
+        const SizedBox(width: 24),
+        StreamBuilder<QuerySnapshot>(
+            stream: _firestoreService.getCommentsStream(widget.noteId),
+            builder: (context, snapshot) {
+              final int commentCount = snapshot.data?.docs.length ?? 0;
+              return _actionButton(Icons.chat_bubble_outline, '$commentCount',
+                  subtleTextColor, () {});
+            }),
         const Spacer(),
         StreamBuilder<bool>(
           stream: _firestoreService.isNoteBookmarked(widget.noteId),
           builder: (context, snapshot) {
             final bool isBookmarked = snapshot.data ?? false;
             return IconButton(
-              icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
-              color: isBookmarked ? primaryBlue : subtleTextColor,
-              onPressed: () {
-                 if (_currentUser != null) {
-                   _firestoreService.toggleBookmark(widget.noteId);
-                 }
-              }
-            );
+                icon:
+                    Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
+                color: isBookmarked ? primaryBlue : subtleTextColor,
+                onPressed: () {
+                  if (_currentUser != null) {
+                    _firestoreService.toggleBookmark(widget.noteId);
+                  }
+                });
           },
         ),
         IconButton(
@@ -340,26 +311,38 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             if (value == 'delete') _showDeleteDialog();
             if (value == 'report') _showReportDialog(data['ownerId']);
             if (value == 'edit') {
-                 Navigator.push(context, MaterialPageRoute(builder: (context) => CreateNoteScreen(
-                   docID: widget.noteId,
-                   initialTitle: data['title'],
-                   initialContent: data['content'],
-                   initialCategory: data['category'],
-                   initialIsPublic: data['isPublic'],
-                 )));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => CreateNoteScreen(
+                            docID: widget.noteId,
+                            initialTitle: data['title'],
+                            initialContent: data['content'],
+                            initialCategory: data['category'],
+                            initialIsPublic: data['isPublic'],
+                          )));
             }
           },
           itemBuilder: (BuildContext context) {
             if (isMyNote) {
               return [
-                const PopupMenuItem<String>(value: 'edit', child: Text('Edit Note')),
-                const PopupMenuItem<String>(value: 'stats', child: Text('View Statistics')),
-                const PopupMenuItem<String>(value: 'delete', child: Text('Delete Note', style: TextStyle(color: Colors.red))),
+                const PopupMenuItem<String>(
+                    value: 'edit', child: Text('Edit Note')),
+                const PopupMenuItem<String>(
+                    value: 'stats', child: Text('View Statistics')),
+                const PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Text('Delete Note',
+                        style: TextStyle(color: Colors.red))),
               ];
             } else {
               return [
-                const PopupMenuItem<String>(value: 'mute', child: Text('Hide this author')),
-                const PopupMenuItem<String>(value: 'report', child: Text('Report Note', style: TextStyle(color: Colors.red))),
+                const PopupMenuItem<String>(
+                    value: 'mute', child: Text('Hide this author')),
+                const PopupMenuItem<String>(
+                    value: 'report',
+                    child: Text('Report Note',
+                        style: TextStyle(color: Colors.red))),
               ];
             }
           },
@@ -368,7 +351,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
-  Widget _actionButton(IconData icon, String label, Color color, VoidCallback onPressed) {
+  Widget _actionButton(
+      IconData icon, String label, Color color, VoidCallback onPressed) {
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(8),
@@ -376,7 +360,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(width: 6),
-          Text(label, style: GoogleFonts.lato(color: subtleTextColor, fontWeight: FontWeight.w600)),
+          Text(label,
+              style: GoogleFonts.lato(
+                  color: subtleTextColor, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -385,7 +371,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   Widget _buildNoteContent(Map<String, dynamic> data) {
     return Text(
       data['content'] ?? 'No content found.',
-      style: GoogleFonts.sourceSerif4(fontSize: 18, height: 1.7, color: textColor.withOpacity(0.9)),
+      style: GoogleFonts.sourceSerif4(
+          fontSize: 18, height: 1.7, color: textColor.withOpacity(0.9)),
     );
   }
 
@@ -408,7 +395,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   Widget _buildAuthorFooter(Map<String, dynamic> data, bool isMyNote) {
     final String userEmail = data['userEmail'] ?? 'Anonymous User';
-    final String firstLetter = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
+    final String firstLetter =
+        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
 
     return Row(
       children: [
@@ -424,8 +412,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Written by $userEmail', style: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16)),
-            Text('0 Followers • 4k Following', style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+            Text('Written by $userEmail',
+                style: GoogleFonts.lato(
+                    fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('0 Followers • 4k Following',
+                style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
           ],
         ),
         const Spacer(),
@@ -434,8 +425,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: isMyNote ? Colors.white : primaryBlue,
             foregroundColor: isMyNote ? primaryBlue : Colors.white,
-            side: isMyNote ? const BorderSide(color: primaryBlue) : BorderSide.none,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            side: isMyNote
+                ? const BorderSide(color: primaryBlue)
+                : BorderSide.none,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           ),
           child: Text(isMyNote ? 'Edit Profile' : 'Follow'),
         )
