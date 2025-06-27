@@ -1,3 +1,5 @@
+// lib/widgets/home/people_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -6,6 +8,7 @@ class PeopleCard extends StatelessWidget {
   final Color primaryBlue;
   final Color textColor;
   final Color subtleTextColor;
+  final VoidCallback? onTap; // Tambahkan parameter onTap
 
   const PeopleCard({
     super.key,
@@ -13,6 +16,7 @@ class PeopleCard extends StatelessWidget {
     required this.primaryBlue,
     required this.textColor,
     required this.subtleTextColor,
+    this.onTap, // Inisialisasi onTap
   });
 
   @override
@@ -20,11 +24,15 @@ class PeopleCard extends StatelessWidget {
     final email = data['email'] ?? 'No email';
     final String firstLetter = email.isNotEmpty ? email[0].toUpperCase() : 'U';
 
-    return Container(
-       padding: const EdgeInsets.symmetric(vertical: 16.0),
-       decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
-       child: Row(
-         children: [
+    return InkWell(
+      // Tambahkan InkWell di sini
+      onTap: onTap, // Gunakan callback onTap yang diterima
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
+        child: Row(
+          children: [
             CircleAvatar(
               radius: 24,
               backgroundColor: primaryBlue,
@@ -34,18 +42,24 @@ class PeopleCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            Expanded(child: Text(email, style: GoogleFonts.lato(fontSize: 16, color: textColor, fontWeight: FontWeight.bold))),
+            Expanded(
+                child: Text(email,
+                    style: GoogleFonts.lato(
+                        fontSize: 16,
+                        color: textColor,
+                        fontWeight: FontWeight.bold))),
             OutlinedButton(
-              onPressed: () { /* TODO: Implement follow logic */ },
+              onPressed: () {/* TODO: Implement follow logic */},
               child: const Text('Ikuti'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: subtleTextColor,
-                side: const BorderSide(color: Color(0xFFE5E7EB)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
-              ),
+                  foregroundColor: subtleTextColor,
+                  side: const BorderSide(color: Color(0xFFE5E7EB)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20))),
             )
-         ],
-       ),
+          ],
+        ),
+      ),
     );
   }
 }

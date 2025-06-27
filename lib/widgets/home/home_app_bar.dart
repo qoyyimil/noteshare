@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
 
-
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchController;
   final String searchKeyword;
@@ -29,10 +28,10 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Colors.white, // Pastikan ini putih
-      elevation: 0, // Pastikan elevation 0
-      shadowColor: Colors.transparent, // Tambahkan ini
-      surfaceTintColor: Colors.white, // Tambahkan ini
+      backgroundColor: Colors.white,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.white,
       titleSpacing: 0,
       automaticallyImplyLeading: false,
       title: Center(
@@ -44,8 +43,16 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Image.asset(
                   'assets/Logo.png',
-                  height: 20,
-                  errorBuilder: (context, error, stackTrace) => const Text('NoteShare'),
+                  height: 22,
+                  errorBuilder: (context, error, stackTrace) => Text(
+                    'NoteShare',
+                    style: TextStyle(
+                      color: primaryBlue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -54,8 +61,10 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   height: 40,
                   child: TextField(
                     controller: searchController,
+                    style: GoogleFonts.lato(fontSize: 16),
                     decoration: InputDecoration(
                       hintText: 'Search notes or users...',
+                      hintStyle: TextStyle(color: subtleTextColor),
                       prefixIcon: const Icon(Icons.search, size: 20, color: Colors.grey),
                       suffixIcon: searchKeyword.isNotEmpty
                           ? IconButton(
@@ -65,7 +74,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                           : null,
                       filled: true,
                       fillColor: sidebarBgColor,
-                      contentPadding: EdgeInsets.zero,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -76,33 +85,76 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const Spacer(),
               TextButton.icon(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateNoteScreen())),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateNoteScreen()),
+                ),
                 icon: Icon(Icons.edit_outlined, color: subtleTextColor, size: 20),
                 label: Text('Write', style: GoogleFonts.lato(color: subtleTextColor)),
-                style: TextButton.styleFrom(foregroundColor: Colors.grey[100]),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[100],
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
               ),
               const SizedBox(width: 8),
-              IconButton(onPressed: () {}, icon: Icon(Icons.notifications_none, color: subtleTextColor)),
+              IconButton(
+                onPressed: () {},
+                icon: Icon(Icons.notifications_none, color: subtleTextColor),
+                tooltip: 'Notifications',
+              ),
               const SizedBox(width: 8),
               PopupMenuButton<String>(
                 onSelected: (value) => onMenuItemSelected(value, context),
                 offset: const Offset(0, 40),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                itemBuilder: (context) => [
+                  const PopupMenuItem<String>(
+                    value: 'profile',
+                    child: ListTile(
+                      leading: Icon(Icons.person_outline),
+                      title: Text('Profile'),
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'library',
+                    child: ListTile(
+                      leading: Icon(Icons.bookmark_border),
+                      title: Text('Saved Notes'),
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'notes',
+                    child: ListTile(
+                      leading: Icon(Icons.note_alt_outlined),
+                      title: Text('My Notes'),
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'stats',
+                    child: ListTile(
+                      leading: Icon(Icons.bar_chart_outlined),
+                      title: Text('Statistics'),
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem<String>(
+                    value: 'logout',
+                    child: ListTile(
+                      leading: Icon(Icons.logout, color: Colors.red),
+                      title: Text('Log Out'),
+                    ),
+                  ),
+                ],
                 child: CircleAvatar(
                   radius: 18,
                   backgroundColor: primaryBlue,
                   child: Text(
-                    currentUser?.email?.substring(0, 1).toUpperCase() ?? 'U',
-                    style: const TextStyle(color: Colors.white),
+                    (currentUser?.email?.isNotEmpty ?? false)
+                        ? currentUser!.email![0].toUpperCase()
+                        : 'U',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
-                itemBuilder: (context) => [
-                  const PopupMenuItem<String>(value: 'profile', child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profile'))),
-                  const PopupMenuItem<String>(value: 'library', child: ListTile(leading: Icon(Icons.bookmark_border), title: Text('Saved Notes'))),
-                  const PopupMenuItem<String>(value: 'notes', child: ListTile(leading: Icon(Icons.note_alt_outlined), title: Text('My Notes'))),
-                  const PopupMenuItem<String>(value: 'stats', child: ListTile(leading: Icon(Icons.bar_chart_outlined), title: Text('Statistics'))),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem<String>(value: 'logout', child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Log Out'))),
-                ],
               ),
               const SizedBox(width: 16),
             ],

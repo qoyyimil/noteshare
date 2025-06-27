@@ -18,7 +18,9 @@ import 'package:noteshare/screens/my_bookmarks_screen.dart';
 import 'package:noteshare/screens/my_notes_screen.dart';
 import 'package:noteshare/screens/note_detail_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/screens/public_profile.dart';
 import 'package:provider/provider.dart';
+import 'package:noteshare/screens/profile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -101,13 +103,23 @@ class _HomeScreenState extends State<HomeScreen> {
   // Callback untuk PopupMenuButton di AppBar
   void _onMenuItemSelected(String value, BuildContext context) {
     switch (value) {
+      case 'profile':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfilePage()),
+        );
+        break;
       case 'notes':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const MyNotesScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MyNotesScreen()),
+        );
         break;
       case 'library':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const MyBookmarksScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MyBookmarksScreen()),
+        );
         break;
       case 'logout':
         final authService = Provider.of<AuthService>(context, listen: false);
@@ -281,7 +293,9 @@ class _HomeScreenState extends State<HomeScreen> {
           final filteredUsers = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final email = (data['email'] ?? '').toLowerCase();
-            return email.contains(_searchKeyword);
+            final userName = (data['userName'] ?? '').toLowerCase();
+            return email.contains(_searchKeyword) ||
+                userName.contains(_searchKeyword);
           }).toList();
 
           if (filteredUsers.isEmpty)
@@ -290,13 +304,31 @@ class _HomeScreenState extends State<HomeScreen> {
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
             itemCount: filteredUsers.length,
-            itemBuilder: (context, index) => PeopleCard(
-              // Menggunakan widget PeopleCard
-              data: filteredUsers[index].data() as Map<String, dynamic>,
-              primaryBlue: primaryBlue,
-              textColor: textColor,
-              subtleTextColor: subtleTextColor,
-            ),
+            itemBuilder: (context, index) {
+              final userData =
+                  filteredUsers[index].data() as Map<String, dynamic>;
+              final userId = filteredUsers[index].id; // Dapatkan UID pengguna
+              final userName = userData['userName'] ??
+                  userData['email']; // Ambil nama atau email
+
+              return PeopleCard(
+                data: userData,
+                primaryBlue: primaryBlue,
+                textColor: textColor,
+                subtleTextColor: subtleTextColor,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PublicProfileScreen(
+                        userId: userId,
+                        userName: userName,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
           );
         });
   }

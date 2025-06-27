@@ -94,13 +94,13 @@ class _CommentSectionState extends State<CommentSection> {
                 .deleteComment(widget.noteId, commentId);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Komentar berhasil dihapus.'),
+                  content: Text('Successfully deleted comment'),
                   backgroundColor: Colors.green),
             );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text('Gagal menghapus komentar: $e'),
+                  content: Text('Failed to delete comment: $e'),
                   backgroundColor: Colors.red),
             );
           }
@@ -208,7 +208,7 @@ class _CommentSectionState extends State<CommentSection> {
               // --- Menampilkan chip jika sedang membalas ---
               if (_replyingToCommentId != null)
                 Chip(
-                  label: Text('Membalas @${_replyingToUserEmail ?? ''}'),
+                  label: Text('Replying to @${_replyingToUserEmail ?? ''}'),
                   onDeleted: _cancelReply,
                   backgroundColor: Colors.blue.shade50,
                   deleteIconColor: Colors.blue.shade700,
@@ -218,7 +218,7 @@ class _CommentSectionState extends State<CommentSection> {
                 controller: _commentController,
                 maxLines: null,
                 decoration: InputDecoration(
-                  hintText: 'kan pemikiran Anda...',
+                  hintText: 'Write a comment...',
                   border: InputBorder.none,
                 ),
               ),
@@ -227,7 +227,7 @@ class _CommentSectionState extends State<CommentSection> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _postComment,
-                  child: Text('Kirim',
+                  child: Text('Send',
                       style: GoogleFonts.lato(color: primaryBlue)),
                 ),
               )

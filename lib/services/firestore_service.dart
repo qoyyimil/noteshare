@@ -7,15 +7,15 @@ class FirestoreService {
 
   late final CollectionReference notes;
   late final CollectionReference users;
-  late final CollectionReference reports; // <-- ADDED for reports
+  late final CollectionReference reports;
 
   FirestoreService() {
     notes = _firestore.collection('notes');
     users = _firestore.collection('users');
-    reports = _firestore.collection('reports'); // <-- ADDED for reports
+    reports = _firestore.collection('reports');
   }
 
-  // FUNGSI BARU: Menyimpan data pengguna ke koleksi 'users'
+  // Save user record
   Future<void> saveUserRecord(User user) {
     return users.doc(user.uid).set({
       'email': user.email,
@@ -23,9 +23,8 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
-  // CREATE: add a new note
-  Future<void> addNote(
-      String title, String content, String category, bool isPublic) {
+  // Add a new note
+  Future<void> addNote(String title, String content, String category, bool isPublic) {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception("User not logged in.");
 
@@ -39,45 +38,38 @@ class FirestoreService {
       'userEmail': currentUser.email,
       'allowed_users': [currentUser.uid],
       'bookmarkCount': 0,
-      'likes': [], // <-- NEW: Initialize likes array
+      'likes': [],
     });
   }
 
-  // FUNGSI BARU: Undang pengguna ke catatan berdasarkan email
-  Future<String> inviteUserToNote(
-      {required String noteId, required String email}) async {
+  // Invite user to note by email
+  Future<String> inviteUserToNote({required String noteId, required String email}) async {
     try {
-      final querySnapshot =
-          await users.where('email', isEqualTo: email).limit(1).get();
-
+      final querySnapshot = await users.where('email', isEqualTo: email).limit(1).get();
       if (querySnapshot.docs.isEmpty) {
         return "Error: User with email $email not found.";
       }
-
       final invitedUserId = querySnapshot.docs.first.id;
-
       await notes.doc(noteId).update({
         'allowed_users': FieldValue.arrayUnion([invitedUserId])
       });
-
-      return "Success: $email have been invited to collaborate.";
+      return "Success: $email has been invited to collaborate.";
     } catch (e) {
-      return "Error: An error occured. ${e.toString()}";
+      return "Error: An error occurred. ${e.toString()}";
     }
   }
 
-  // READ (Privat): Ambil catatan di mana ID saya ada di dalam daftar 'allowed_users'
+  // Get private notes (where user is in allowed_users)
   Stream<QuerySnapshot> getMyNotesStream() {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) return const Stream.empty();
-
     return notes
         .where('allowed_users', arrayContains: currentUser.uid)
         .orderBy('timestamp', descending: true)
         .snapshots();
   }
 
-  // READ (Public): Ambil catatan publik
+  // Get all public notes
   Stream<QuerySnapshot> getPublicNotesStream() {
     return notes
         .where('isPublic', isEqualTo: true)
@@ -85,14 +77,22 @@ class FirestoreService {
         .snapshots();
   }
 
-  // Get a stream of a single note document for real-time updates
+  // Get public notes by ownerId (for public profile)
+  Stream<QuerySnapshot> getPublicNotesByOwnerIdStream(String ownerId) {
+    return notes
+        .where('ownerId', isEqualTo: ownerId)
+        .where('isPublic', isEqualTo: true)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  // Get a single note stream
   Stream<DocumentSnapshot> getNoteStream(String noteId) {
     return notes.doc(noteId).snapshots();
   }
 
-  // UPDATE: update an existing note
-  Future<void> updateNote(String docID, String newTitle, String newContent,
-      String newCategory, bool newIsPublic) {
+  // Update a note
+  Future<void> updateNote(String docID, String newTitle, String newContent, String newCategory, bool newIsPublic) {
     return notes.doc(docID).update({
       'title': newTitle,
       'content': newContent,
@@ -102,29 +102,27 @@ class FirestoreService {
     });
   }
 
-  // DELETE: delete a note
+  // Delete a note
   Future<void> deleteNote(String docID) {
     return notes.doc(docID).delete();
   }
 
-  // --- LIKE, COMMENT, AND REPORT METHODS ---
-
   // Toggle like on a note
   Future<void> toggleLike(String noteId, String userId, bool isLiked) {
     if (isLiked) {
-      // Atomically remove user's ID from the 'likes' array
       return notes.doc(noteId).update({
         'likes': FieldValue.arrayRemove([userId])
       });
     } else {
-      // Atomically add user's ID to the 'likes' array
       return notes.doc(noteId).update({
         'likes': FieldValue.arrayUnion([userId])
       });
     }
   }
 
-  // Get a stream of comments for a note, ordered by timestamp
+  // ===================== KOMENTAR =====================
+
+  // Stream komentar real-time untuk sebuah note
   Stream<QuerySnapshot> getCommentsStream(String noteId) {
     return notes
         .doc(noteId)
@@ -133,13 +131,13 @@ class FirestoreService {
         .snapshots();
   }
 
-  // Add a new comment or reply
+  // Tambah komentar ke note
   Future<void> addComment({
     required String noteId,
     required String text,
     required String userId,
     required String userEmail,
-    String? parentCommentId, // Optional: for replies
+    String? parentCommentId,
   }) {
     return notes.doc(noteId).collection('comments').add({
       'text': text,
@@ -147,21 +145,20 @@ class FirestoreService {
       'userEmail': userEmail,
       'timestamp': Timestamp.now(),
       'parentCommentId': parentCommentId,
-      'likes': [], // Array of userIds who liked the comment
+      'likes': [],
     });
   }
 
-  // --- FUNGSI BARU UNTUK MENGHAPUS KOMENTAR ---
+  // Hapus komentar
   Future<void> deleteComment(String noteId, String commentId) async {
     try {
       await notes.doc(noteId).collection('comments').doc(commentId).delete();
-      print("Comment $commentId deleted successfully from note $noteId");
     } catch (e) {
-      print("Error deleting comment $commentId from note $noteId: $e");
-      rethrow; // Re-throw the error to be handled in the UI
+      rethrow;
     }
   }
 
+  // ===================== REPORT =====================
 
   // Add a report for a note
   Future<void> addReport({
@@ -178,55 +175,40 @@ class FirestoreService {
       'reason': reason,
       'details': details,
       'timestamp': Timestamp.now(),
-      'status': 'pending', // e.g., pending, reviewed, resolved
+      'status': 'pending',
     });
   }
 
+  // ===================== BOOKMARK =====================
 
-  // --- BOOKMARKING AND TOP PICKS FUNCTIONS ---
-
-  // Method to toggle bookmark status and update bookmarkCount
+  // Toggle bookmark and update bookmarkCount
   Future<void> toggleBookmark(String noteId) async {
     final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception("User not logged in.");
-    }
+    if (user == null) throw Exception("User not logged in.");
 
-    final userBookmarkRef =
-        users.doc(user.uid).collection('userBookmarks').doc(noteId);
+    final userBookmarkRef = users.doc(user.uid).collection('userBookmarks').doc(noteId);
     final noteRef = notes.doc(noteId);
 
-    FirebaseFirestore.instance.runTransaction((transaction) async {
-      DocumentSnapshot userBookmarkSnapshot =
-          await transaction.get(userBookmarkRef);
+    await _firestore.runTransaction((transaction) async {
+      DocumentSnapshot userBookmarkSnapshot = await transaction.get(userBookmarkRef);
       DocumentSnapshot noteSnapshot = await transaction.get(noteRef);
 
-      if (!noteSnapshot.exists) {
-        throw Exception("Note does not exist!");
-      }
+      if (!noteSnapshot.exists) throw Exception("Note does not exist!");
 
       if (userBookmarkSnapshot.exists) {
-        // User has bookmarked it, so unbookmark
         transaction.delete(userBookmarkRef);
         transaction.update(noteRef, {'bookmarkCount': FieldValue.increment(-1)});
       } else {
-        // User has not bookmarked it, so bookmark
-        transaction.set(
-            userBookmarkRef, {'timestamp': FieldValue.serverTimestamp()});
+        transaction.set(userBookmarkRef, {'timestamp': FieldValue.serverTimestamp()});
         transaction.update(noteRef, {'bookmarkCount': FieldValue.increment(1)});
       }
-    }).catchError((error) {
-      print("Failed to toggle bookmark: $error");
-      throw error;
     });
   }
 
-  // Method to check if a user has bookmarked a specific note
+  // Check if a note is bookmarked by the user
   Stream<bool> isNoteBookmarked(String noteId) {
     final user = _auth.currentUser;
-    if (user == null) {
-      return Stream.value(false);
-    }
+    if (user == null) return Stream.value(false);
     return users
         .doc(user.uid)
         .collection('userBookmarks')
@@ -235,24 +217,20 @@ class FirestoreService {
         .map((snapshot) => snapshot.exists);
   }
 
-  // Stream to get Top Picks (notes ordered by bookmarkCount)
+  // Get top picks notes (ordered by bookmarkCount)
   Stream<QuerySnapshot> getTopPicksNotesStream({int limit = 4}) {
     return notes
         .where('isPublic', isEqualTo: true)
         .orderBy('bookmarkCount', descending: true)
-        .orderBy('timestamp',
-            descending: true) // Secondary sort for tie-breaking
+        .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots();
   }
 
-  // Stream to get a user's bookmarked notes for "Perpustakaan"
+  // Get user's bookmarked notes for "Perpustakaan"
   Stream<List<Map<String, dynamic>>> getUserBookmarksStream() {
     final user = _auth.currentUser;
-    if (user == null) {
-      return Stream.value([]); // Return an empty list if no user
-    }
-
+    if (user == null) return Stream.value([]);
     return users
         .doc(user.uid)
         .collection('userBookmarks')
@@ -260,25 +238,140 @@ class FirestoreService {
         .snapshots()
         .asyncMap((bookmarkSnapshot) async {
       List<Map<String, dynamic>> bookmarkedNotes = [];
-      if (bookmarkSnapshot.docs.isEmpty) {
-        return bookmarkedNotes;
-      }
+      if (bookmarkSnapshot.docs.isEmpty) return bookmarkedNotes;
 
-      List<String> bookmarkedNoteIds =
-          bookmarkSnapshot.docs.map((doc) => doc.id).toList();
+      List<String> bookmarkedNoteIds = bookmarkSnapshot.docs.map((doc) => doc.id).toList();
 
-      if (bookmarkedNoteIds.isNotEmpty) {
-        // Firestore 'whereIn' is limited. For many bookmarks, batching is needed.
-        // This implementation fetches one by one for simplicity and robustness.
-        for (String noteId in bookmarkedNoteIds) {
-          final noteDoc = await notes.doc(noteId).get();
-          if (noteDoc.exists) {
-            final noteData = noteDoc.data() as Map<String, dynamic>;
-            bookmarkedNotes.add({'id': noteId, ...noteData});
-          }
+      for (String noteId in bookmarkedNoteIds) {
+        final noteDoc = await notes.doc(noteId).get();
+        if (noteDoc.exists) {
+          final noteData = noteDoc.data() as Map<String, dynamic>;
+          bookmarkedNotes.add({'id': noteId, ...noteData});
         }
       }
       return bookmarkedNotes;
     });
   }
+
+// FOLLOW/UNFOLLOW FUNCTIONALITY
+  
+  // Toggle follow/unfollow a user
+  Future<void> toggleFollowUser(String targetUserId) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("User not logged in");
+    if (user.uid == targetUserId) throw Exception("Cannot follow yourself");
+
+    final currentUserRef = users.doc(user.uid);
+    final targetUserRef = users.doc(targetUserId);
+    
+    // Check if already following
+    final followingRef = currentUserRef.collection('following').doc(targetUserId);
+    final followerRef = targetUserRef.collection('followers').doc(user.uid);
+    
+    final followingDoc = await followingRef.get();
+    
+    if (followingDoc.exists) {
+      // Unfollow: remove from both collections
+      await followingRef.delete();
+      await followerRef.delete();
+    } else {
+      // Follow: add to both collections
+      await followingRef.set({
+        'userId': targetUserId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      await followerRef.set({
+        'userId': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  // Check if current user is following a specific user
+  Stream<bool> isFollowingUser(String targetUserId) {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(false);
+    if (user.uid == targetUserId) return Stream.value(false);
+
+    return users
+        .doc(user.uid)
+        .collection('following')
+        .doc(targetUserId)
+        .snapshots()
+        .map((doc) => doc.exists);
+  }
+
+  // Get followers count for a user
+  Stream<int> getFollowersCount(String userId) {
+    return users
+        .doc(userId)
+        .collection('followers')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  // Get following count for a user
+  Stream<int> getFollowingCount(String userId) {
+    return users
+        .doc(userId)
+        .collection('following')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  // Get user details by ID
+  Future<Map<String, dynamic>?> getUserById(String userId) async {
+    try {
+      final doc = await users.doc(userId).get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      print("Error getting user: $e");
+      return null;
+    }
+  }
+
+Future<void> followUser(String targetUserId, String currentUserId) async {
+  // Tambah ke followers target
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(targetUserId)
+      .collection('followers')
+      .doc(currentUserId)
+      .set({'timestamp': FieldValue.serverTimestamp()});
+  // Tambah ke following user sendiri
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(currentUserId)
+      .collection('following')
+      .doc(targetUserId)
+      .set({'timestamp': FieldValue.serverTimestamp()});
+}
+
+Future<void> unfollowUser(String targetUserId, String currentUserId) async {
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(targetUserId)
+      .collection('followers')
+      .doc(currentUserId)
+      .delete();
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(currentUserId)
+      .collection('following')
+      .doc(targetUserId)
+      .delete();
+}
+
+Stream<bool> isFollowing(String targetUserId, String currentUserId) {
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(currentUserId)
+      .collection('following')
+      .doc(targetUserId)
+      .snapshots()
+      .map((doc) => doc.exists);
+}
 }

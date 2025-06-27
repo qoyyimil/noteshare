@@ -22,6 +22,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
 
+  // Follow state
+  bool _isFollowing = false;
+  bool _isFollowLoading = false;
+  String? _noteOwnerId;
+
   // -- Warna dari Desain --
   static const Color primaryBlue = Color(0xFF3B82F6);
   static const Color textColor = Color(0xFF1F2937);
@@ -82,6 +87,56 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         },
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Tidak perlu load ownerId di initState, ownerId diambil dari data note di builder
+  }
+
+  Future<void> _handleFollow(String ownerId) async {
+    if (_currentUser == null || ownerId == _currentUser!.uid) return;
+    
+    setState(() { _isFollowLoading = true; });
+    
+    try {
+      await _firestoreService.toggleFollowUser(ownerId);
+      
+      // Cek status follow terbaru
+      final isFollowing = await _firestoreService.isFollowingUser(ownerId).first;
+      
+      if (mounted) {
+        setState(() {
+          _isFollowing = isFollowing;
+          _isFollowLoading = false;
+        });
+        
+        // Tampilkan notifikasi berhasil
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isFollowing ? 'You are now following this user' : 'You have unfollowed this user'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isFollowLoading = false;
+        });
+        
+        // Tampilkan notifikasi error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to follow/unfollow user: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -228,7 +283,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
-            child: const Text('Ikuti'),
+            child: const Text('Follow'),
           ),
       ],
     );
@@ -329,7 +384,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   Widget _buildNoteContent(Map<String, dynamic> data) {
     return Text(
-      data['content'] ?? 'Tidak ada konten.',
+      data['content'] ?? 'No content found.',
       style: GoogleFonts.sourceSerif4(fontSize: 18, height: 1.7, color: textColor.withOpacity(0.9)),
     );
   }
