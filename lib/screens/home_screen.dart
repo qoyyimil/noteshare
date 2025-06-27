@@ -13,13 +13,12 @@ import 'package:noteshare/widgets/home/top_picks_sidebar.dart';
 
 import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
-import 'package:noteshare/screens/create_note_screen.dart'; 
+import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/screens/my_bookmarks_screen.dart';
-import 'package:noteshare/screens/my_notes_screen.dart'; 
-import 'package:noteshare/screens/note_detail_screen.dart'; 
+import 'package:noteshare/screens/my_notes_screen.dart';
+import 'package:noteshare/screens/note_detail_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:provider/provider.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,7 +44,15 @@ class _HomeScreenState extends State<HomeScreen> {
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
 
-  final List<String> _categories = ['For You', 'General', 'Physics', 'Mathematics', 'History', 'Biology', 'Chemistry'];
+  final List<String> _categories = [
+    'For You',
+    'General',
+    'Physics',
+    'Mathematics',
+    'History',
+    'Biology',
+    'Chemistry'
+  ];
 
   @override
   void initState() {
@@ -95,10 +102,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onMenuItemSelected(String value, BuildContext context) {
     switch (value) {
       case 'notes':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const MyNotesScreen()));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const MyNotesScreen()));
         break;
       case 'library':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const MyBookmarksScreen()));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const MyBookmarksScreen()));
         break;
       case 'logout':
         final authService = Provider.of<AuthService>(context, listen: false);
@@ -117,12 +126,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: HomeAppBar( // Menggunakan widget HomeAppBar
+      appBar: HomeAppBar(
+        // Menggunakan widget HomeAppBar
         searchController: _searchController,
         searchKeyword: _searchKeyword,
         onClearSearch: _clearSearch,
@@ -143,14 +152,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   children: [
                     _searchKeyword.isEmpty
-                        ? CategoryTabs( // Menggunakan widget CategoryTabs
+                        ? CategoryTabs(
+                            // Menggunakan widget CategoryTabs
                             categories: _categories,
                             selectedCategory: _selectedCategory,
                             onCategorySelected: _onCategorySelected,
                             primaryBlue: primaryBlue,
                             subtleTextColor: subtleTextColor,
                           )
-                        : SearchTabs( // Menggunakan widget SearchTabs
+                        : SearchTabs(
+                            // Menggunakan widget SearchTabs
                             activeSearchTab: _activeSearchTab,
                             onSearchTabSelected: _onSearchTabSelected,
                             primaryBlue: primaryBlue,
@@ -171,7 +182,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   width: 350,
                   padding: const EdgeInsets.only(left: 24.0, top: 16.0),
-                  child: TopPicksSidebar( // Menggunakan widget TopPicksSidebar
+                  child: TopPicksSidebar(
+                    // Menggunakan widget TopPicksSidebar
                     firestoreService: firestoreService,
                     primaryBlue: primaryBlue,
                     textColor: textColor,
@@ -192,19 +204,25 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: firestoreService.getPublicNotesStream(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
 
         final notes = snapshot.data!.docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return _selectedCategory == 'For you' || (data['category'] ?? '').toString().toLowerCase() == _selectedCategory.toLowerCase();
+          final data = doc.data() as Map<String, dynamic>;
+          return _selectedCategory == 'For You' ||
+              (data['category'] ?? '').toString().toLowerCase() ==
+                  _selectedCategory.toLowerCase();
         }).toList();
 
-        if (notes.isEmpty) return const Center(child: Text("There are no notes in this category."));
+        if (notes.isEmpty)
+          return const Center(
+              child: Text("There are no notes in this category."));
 
         return ListView.builder(
           padding: const EdgeInsets.all(16.0),
           itemCount: notes.length,
-          itemBuilder: (context, index) => NoteCard( // Menggunakan widget NoteCard
+          itemBuilder: (context, index) => NoteCard(
+            // Menggunakan widget NoteCard
             docId: notes[index].id,
             data: notes[index].data() as Map<String, dynamic>,
             firestoreService: firestoreService,
@@ -221,22 +239,27 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<QuerySnapshot>(
         stream: firestoreService.getPublicNotesStream(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
 
           final filteredNotes = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final title = (data['title'] ?? '').toLowerCase();
             final content = (data['content'] ?? '').toLowerCase();
             final userEmail = (data['userEmail'] ?? '').toLowerCase();
-            return title.contains(_searchKeyword) || content.contains(_searchKeyword) || userEmail.contains(_searchKeyword);
+            return title.contains(_searchKeyword) ||
+                content.contains(_searchKeyword) ||
+                userEmail.contains(_searchKeyword);
           }).toList();
 
-          if (filteredNotes.isEmpty) return const Center(child: Text("No matching notes found."));
+          if (filteredNotes.isEmpty)
+            return const Center(child: Text("No matching notes found."));
 
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
             itemCount: filteredNotes.length,
-            itemBuilder: (context, index) => NoteCard( // Menggunakan widget NoteCard
+            itemBuilder: (context, index) => NoteCard(
+              // Menggunakan widget NoteCard
               docId: filteredNotes[index].id,
               data: filteredNotes[index].data() as Map<String, dynamic>,
               firestoreService: firestoreService,
@@ -252,7 +275,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<QuerySnapshot>(
         stream: firestoreService.users.snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
 
           final filteredUsers = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
@@ -260,12 +284,14 @@ class _HomeScreenState extends State<HomeScreen> {
             return email.contains(_searchKeyword);
           }).toList();
 
-          if (filteredUsers.isEmpty) return const Center(child: Text("Users not found."));
+          if (filteredUsers.isEmpty)
+            return const Center(child: Text("Users not found."));
 
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
             itemCount: filteredUsers.length,
-            itemBuilder: (context, index) => PeopleCard( // Menggunakan widget PeopleCard
+            itemBuilder: (context, index) => PeopleCard(
+              // Menggunakan widget PeopleCard
               data: filteredUsers[index].data() as Map<String, dynamic>,
               primaryBlue: primaryBlue,
               textColor: textColor,

@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       backgroundColor: Colors.blueAccent,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                  child: const Text("Login", style: TextStyle(fontSize: 16)),
+                  child: const Text("Sign in", style: TextStyle(fontSize: 16)),
                 ),
               ),
               const SizedBox(height: 20),
