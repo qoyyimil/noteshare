@@ -149,18 +149,12 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   radius: 18,
                   backgroundColor: primaryBlue,
                   child: Text(
-                    currentUser?.email?.substring(0, 1).toUpperCase() ?? 'U',
-                    style: const TextStyle(color: Colors.white),
+                    (currentUser?.email?.isNotEmpty ?? false)
+                        ? currentUser!.email![0].toUpperCase()
+                        : 'U',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
-                itemBuilder: (context) => [
-                  const PopupMenuItem<String>(value: 'profile', child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profile'))),
-                  const PopupMenuItem<String>(value: 'library', child: ListTile(leading: Icon(Icons.bookmark_border), title: Text('Saved Notes'))),
-                  const PopupMenuItem<String>(value: 'notes', child: ListTile(leading: Icon(Icons.note_alt_outlined), title: Text('My Notes'))),
-                  const PopupMenuItem<String>(value: 'stats', child: ListTile(leading: Icon(Icons.bar_chart_outlined), title: Text('Statistics'))),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem<String>(value: 'logout', child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Log Out'))),
-                ],
               ),
               const SizedBox(width: 16),
             ],
