@@ -7,6 +7,7 @@ import 'package:noteshare/screens/profile.dart';
 import 'package:noteshare/screens/my_bookmarks_screen.dart';
 import 'package:noteshare/screens/my_notes_screen.dart';
 import 'package:noteshare/screens/login_screen.dart';
+import 'package:noteshare/screens/statistics_screen.dart'; // <-- IMPORT HALAMAN STATISTIK
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchController;
@@ -28,6 +29,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.sidebarBgColor,
   });
 
+  // --- FUNGSI NAVIGASI DIPERBARUI DI SINI ---
   void _onMenuItemSelected(String value, BuildContext context) async {
     if (value == 'profile') {
       Navigator.push(
@@ -44,6 +46,13 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         context,
         MaterialPageRoute(builder: (context) => const MyNotesScreen()),
       );
+    } else if (value == 'stats') { // <-- KONDISI BARU DITAMBAHKAN
+      if (currentUser != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => StatisticsScreen(userId: currentUser!.uid)),
+        );
+      }
     } else if (value == 'logout') {
       await FirebaseAuth.instance.signOut();
       Navigator.pushAndRemoveUntil(

@@ -67,8 +67,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         confirmText: 'Delete',
         onDelete: () async {
           try {
-            Navigator.of(context).pop();
-            Navigator.of(context).pop();
+            Navigator.of(context).pop(); // Tutup dialog konfirmasi
+            Navigator.of(context).pop(); // Kembali ke layar sebelumnya
             await _firestoreService.deleteNote(widget.noteId);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -125,13 +125,19 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
   }
 
+  Future<void> _incrementReadCount() async {
+    // Fungsi ini dipanggil dari initState untuk menaikkan jumlah pembaca
+    // setiap kali layar ini dibuka.
+    _firestoreService.incrementReadCount(widget.noteId);
+  }
+
   @override
   void initState() {
     super.initState();
+    _incrementReadCount();
     _searchController.addListener(() {
       setState(() {}); // Update UI when search text changes
     });
-    // Tidak perlu load ownerId di initState, ownerId diambil dari data note di builder
   }
 
   @override
@@ -150,11 +156,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       body: StreamBuilder<DocumentSnapshot>(
         stream: _firestoreService.getNoteStream(widget.noteId),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (!snapshot.data!.exists) {
-            return const Center(child: Text("No notes found."));
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text("Note not found."));
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -219,11 +225,12 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
     final formattedTime = timestamp != null
         ? DateFormat.yMMMMd('id_ID').add_jm().format(timestamp)
-        : 'Seconds ago';
+        : 'A few seconds ago';
 
+    final int readCount = data['readCount'] ?? 0;
     final String userEmail = data['userEmail'] ?? 'Anonymous User';
     final String firstLetter =
-        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
+        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'A';
 
     return Row(
       children: [
@@ -231,22 +238,33 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           radius: 24,
           backgroundColor: primaryBlue,
           child: Text(
-            firstLetter, // Menampilkan huruf pertama email
+            firstLetter,
             style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),
         const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(userEmail,
-                style: GoogleFonts.lato(
-                    fontWeight: FontWeight.bold, fontSize: 16)),
-            Text(formattedTime,
-                style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(userEmail,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.lato(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
+              Row(
+                children: [
+                  Text(formattedTime,
+                      style:
+                          GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+                  Text(' • $readCount views',
+                      style:
+                          GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+                ],
+              ),
+            ],
+          ),
         ),
-        const Spacer(),
+        const SizedBox(width: 12),
         if (!isMyNote)
           ElevatedButton(
             onPressed: () {},
@@ -304,46 +322,52 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           icon: const Icon(Icons.share_outlined, color: subtleTextColor),
           onPressed: () => _showShareDialog(context, data['title'], isMyNote),
         ),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_horiz, color: subtleTextColor),
-          onSelected: (value) {
-            if (value == 'delete') _showDeleteDialog();
-            if (value == 'report') _showReportDialog(data['ownerId']);
-            if (value == 'edit') {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => CreateNoteScreen(
-                            docID: widget.noteId,
-                            initialTitle: data['title'],
-                            initialContent: data['content'],
-                            initialCategory: data['category'],
-                            initialIsPublic: data['isPublic'],
-                          )));
-            }
-          },
-          itemBuilder: (BuildContext context) {
-            if (isMyNote) {
-              return [
-                const PopupMenuItem<String>(
-                    value: 'edit', child: Text('Edit Note')),
-                const PopupMenuItem<String>(
-                    value: 'stats', child: Text('View Statistics')),
-                const PopupMenuItem<String>(
-                    value: 'delete',
-                    child: Text('Delete Note',
-                        style: TextStyle(color: Colors.red))),
-              ];
-            } else {
-              return [
-                const PopupMenuItem<String>(
-                    value: 'mute', child: Text('Hide this author')),
-                const PopupMenuItem<String>(
-                    value: 'report',
-                    child: Text('Report Note',
-                        style: TextStyle(color: Colors.red))),
-              ];
-            }
+        Builder(
+          builder: (menuContext) {
+            return PopupMenuButton<String>(
+              icon: const Icon(Icons.more_horiz, color: subtleTextColor),
+              onSelected: (value) {
+                if (value == 'delete') _showDeleteDialog();
+                if (value == 'report') _showReportDialog(data['ownerId']);
+                if (value == 'edit') {
+                  Navigator.push(
+                      menuContext,
+                      MaterialPageRoute(
+                          builder: (context) => CreateNoteScreen(
+                                docID: widget.noteId,
+                                initialTitle: data['title'],
+                                initialContent: data['content'],
+                                initialCategory: data['category'],
+                                initialIsPublic: data['isPublic'],
+                              )));
+                }
+                // Logika untuk 'stats' dihapus dari sini
+              },
+              itemBuilder: (BuildContext context) {
+                if (isMyNote) {
+                  return [
+                    const PopupMenuItem<String>(
+                        value: 'edit', child: Text('Edit Note')),
+                    // --- ITEM MENU STATISTIK DIHAPUS ---
+                    // const PopupMenuItem<String>(
+                    //     value: 'stats', child: Text('View Statistics')),
+                    const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Delete Note',
+                            style: TextStyle(color: Colors.red))),
+                  ];
+                } else {
+                  return [
+                    const PopupMenuItem<String>(
+                        value: 'mute', child: Text('Hide this author')),
+                    const PopupMenuItem<String>(
+                        value: 'report',
+                        child: Text('Report Note',
+                            style: TextStyle(color: Colors.red))),
+                  ];
+                }
+              },
+            );
           },
         ),
       ],
@@ -395,7 +419,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   Widget _buildAuthorFooter(Map<String, dynamic> data, bool isMyNote) {
     final String userEmail = data['userEmail'] ?? 'Anonymous User';
     final String firstLetter =
-        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'P';
+        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'A';
 
     return Row(
       children: [

@@ -40,6 +40,7 @@ class FirestoreService {
       'allowed_users': [currentUser.uid],
       'bookmarkCount': 0,
       'likes': [],
+      'readCount': 0, // Inisialisasi readCount saat note baru dibuat
     });
   }
 
@@ -94,6 +95,55 @@ class FirestoreService {
     return notes.doc(noteId).snapshots();
   }
 
+  // --- FUNGSI UNTUK MENAIKKAN JUMLAH PEMBACA ---
+  Future<void> incrementReadCount(String noteId) {
+    return notes.doc(noteId).update({
+      'readCount': FieldValue.increment(1),
+    });
+  }
+
+  // --- FUNGSI STATISTIK YANG DIPERBAIKI ---
+  Stream<Map<String, dynamic>> getNotesAndStatsForUser(String userId) {
+    return notes.where('ownerId', isEqualTo: userId)
+      .orderBy('timestamp', descending: true)
+      .snapshots()
+      .map((snapshot) {
+        if (snapshot.docs.isEmpty) {
+          return {'totalLikes': 0, 'totalReads': 0, 'dailyStats': <DateTime, Map<String, int>>{}};
+        }
+
+        int totalLikes = 0;
+        int totalReads = 0;
+        // Map<Tanggal Penuh, Map<Tipe, Jumlah>>
+        Map<DateTime, Map<String, int>> dailyStats = {};
+
+        for (var doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          
+          totalLikes += (data['likes'] as List?)?.length ?? 0;
+          totalReads += (data['readCount'] as int?) ?? 0;
+          
+          final timestamp = (data['timestamp'] as Timestamp).toDate();
+          // Membuat kunci berdasarkan tanggal (tanpa jam, menit, detik)
+          final dayKey = DateTime(timestamp.year, timestamp.month, timestamp.day);
+
+          if (!dailyStats.containsKey(dayKey)) {
+            dailyStats[dayKey] = {'likes': 0, 'reads': 0};
+          }
+          
+          dailyStats[dayKey]!['likes'] = (dailyStats[dayKey]!['likes'] ?? 0) + ((data['likes'] as List?)?.length ?? 0);
+          dailyStats[dayKey]!['reads'] = (dailyStats[dayKey]!['reads'] ?? 0) + ((data['readCount'] as int?) ?? 0);
+        }
+        
+        return {
+          'totalLikes': totalLikes,
+          'totalReads': totalReads,
+          'dailyStats': dailyStats,
+        };
+      });
+  }
+
+
   // Update a note
   Future<void> updateNote(String docID, String newTitle, String newContent,
       String newCategory, bool newIsPublic) {
@@ -125,8 +175,7 @@ class FirestoreService {
   }
 
   // ===================== KOMENTAR =====================
-
-  // Stream komentar real-time untuk sebuah note
+  
   Stream<QuerySnapshot> getCommentsStream(String noteId) {
     return notes
         .doc(noteId)
@@ -135,7 +184,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // Tambah komentar ke note
   Future<void> addComment({
     required String noteId,
     required String text,
@@ -153,7 +201,6 @@ class FirestoreService {
     });
   }
 
-  // Hapus komentar
   Future<void> deleteComment(String noteId, String commentId) async {
     try {
       await notes.doc(noteId).collection('comments').doc(commentId).delete();
@@ -164,7 +211,6 @@ class FirestoreService {
 
   // ===================== REPORT =====================
 
-  // Add a report for a note
   Future<void> addReport({
     required String noteId,
     required String noteOwnerId,
@@ -185,7 +231,6 @@ class FirestoreService {
 
   // ===================== BOOKMARK =====================
 
-  // Toggle bookmark and update bookmarkCount
   Future<void> toggleBookmark(String noteId) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception("User not logged in.");
@@ -213,7 +258,6 @@ class FirestoreService {
     });
   }
 
-  // Check if a note is bookmarked by the user
   Stream<bool> isNoteBookmarked(String noteId) {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(false);
@@ -225,17 +269,16 @@ class FirestoreService {
         .map((snapshot) => snapshot.exists);
   }
 
-  // Get top picks notes (ordered by bookmarkCount)
+  // Get top picks notes (diurutkan berdasarkan jumlah bookmark)
   Stream<QuerySnapshot> getTopPicksNotesStream({int limit = 4}) {
     return notes
         .where('isPublic', isEqualTo: true)
-        .orderBy('bookmarkCount', descending: true)
+        .orderBy('bookmarkCount', descending: true) // <-- DIKEMBALIKAN ke bookmarkCount
         .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots();
   }
 
-  // Get user's bookmarked notes for "Perpustakaan"
   Stream<List<Map<String, dynamic>>> getUserBookmarksStream() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value([]);
@@ -262,9 +305,8 @@ class FirestoreService {
     });
   }
 
-// FOLLOW/UNFOLLOW FUNCTIONALITY
-
-  // Toggle follow/unfollow a user
+  // ===================== FOLLOW/UNFOLLOW =====================
+  
   Future<void> toggleFollowUser(String targetUserId) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception("User not logged in");
@@ -273,7 +315,6 @@ class FirestoreService {
     final currentUserRef = users.doc(user.uid);
     final targetUserRef = users.doc(targetUserId);
 
-    // Check if already following
     final followingRef =
         currentUserRef.collection('following').doc(targetUserId);
     final followerRef = targetUserRef.collection('followers').doc(user.uid);
@@ -281,11 +322,9 @@ class FirestoreService {
     final followingDoc = await followingRef.get();
 
     if (followingDoc.exists) {
-      // Unfollow: remove from both collections
       await followingRef.delete();
       await followerRef.delete();
     } else {
-      // Follow: add to both collections
       await followingRef.set({
         'userId': targetUserId,
         'timestamp': FieldValue.serverTimestamp(),
@@ -297,7 +336,6 @@ class FirestoreService {
     }
   }
 
-  // Check if current user is following a specific user
   Stream<bool> isFollowingUser(String targetUserId) {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(false);
@@ -311,7 +349,6 @@ class FirestoreService {
         .map((doc) => doc.exists);
   }
 
-  // Get followers count for a user
   Stream<int> getFollowersCount(String userId) {
     return users
         .doc(userId)
@@ -320,7 +357,6 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.length);
   }
 
-  // Get following count for a user
   Stream<int> getFollowingCount(String userId) {
     return users
         .doc(userId)
@@ -329,7 +365,6 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.length);
   }
 
-  // Get user details by ID
   Future<Map<String, dynamic>?> getUserById(String userId) async {
     try {
       final doc = await users.doc(userId).get();
@@ -344,14 +379,12 @@ class FirestoreService {
   }
 
   Future<void> followUser(String targetUserId, String currentUserId) async {
-    // Tambah ke followers target
     await FirebaseFirestore.instance
         .collection('users')
         .doc(targetUserId)
         .collection('followers')
         .doc(currentUserId)
         .set({'timestamp': FieldValue.serverTimestamp()});
-    // Tambah ke following user sendiri
     await FirebaseFirestore.instance
         .collection('users')
         .doc(currentUserId)
