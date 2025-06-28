@@ -29,8 +29,8 @@ class NoteCard extends StatelessWidget {
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
     final formattedDate = timestamp != null ? DateFormat('d MMM', 'id_ID').format(timestamp) : '';
 
-    final String userFullName = data['userFullName'] ?? 'User';
-    final String firstLetter = userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'U';
+    final String userFullName = data['fullName'] ?? 'User';
+    final String firstLetter = userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
 
     return InkWell(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => NoteDetailScreen(noteId: docId))),

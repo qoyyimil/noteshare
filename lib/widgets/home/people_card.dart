@@ -1,5 +1,3 @@
-// lib/widgets/home/people_card.dart
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -21,12 +19,11 @@ class PeopleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final email = data['fullName'] ?? 'No name';
-    final String firstLetter = email.isNotEmpty ? email[0].toUpperCase() : 'U';
+    final fullName = data['fullName'] ?? 'No name';
+    final String firstLetter = fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
 
     return InkWell(
-      // Tambahkan InkWell di sini
-      onTap: onTap, // Gunakan callback onTap yang diterima
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         decoration: const BoxDecoration(
@@ -43,7 +40,7 @@ class PeopleCard extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             Expanded(
-                child: Text(email,
+                child: Text(fullName,
                     style: GoogleFonts.lato(
                         fontSize: 16,
                         color: textColor,

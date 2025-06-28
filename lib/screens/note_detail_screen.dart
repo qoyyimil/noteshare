@@ -229,7 +229,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         : 'A few seconds ago';
 
     final int readCount = data['readCount'] ?? 0;
-    final String userFullName = data['userFullName'] ?? 'Anonymous User';
+    final String userFullName = data['fullName'] ?? 'Anonymous User';
     final String firstLetter =
         userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
 
@@ -418,7 +418,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   }
 
   Widget _buildAuthorFooter(Map<String, dynamic> data, bool isMyNote) {
-    final String userFullName = data['userFullName'] ?? 'Anonymous User';
+    final String userFullName = data['fullName'] ?? 'Anonymous User';
     final String firstLetter =
         userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
     final String ownerId = data['ownerId'] ?? '';

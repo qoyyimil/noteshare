@@ -25,22 +25,27 @@ class FirestoreService {
 
   // Add a new note
   Future<void> addNote(
-      String title, String content, String category, bool isPublic) {
-    final User? currentUser = _auth.currentUser;
-    if (currentUser == null) throw Exception("User not logged in.");
-
+    String title,
+    String content,
+    String category,
+    bool isPublic, {
+    required String fullName,
+    required String userId,
+    required String? userEmail,
+  }) {
     return notes.add({
       'title': title,
       'content': content,
       'category': category,
       'isPublic': isPublic,
       'timestamp': Timestamp.now(),
-      'ownerId': currentUser.uid,
-      'userEmail': currentUser.email,
-      'allowed_users': [currentUser.uid],
+      'ownerId': userId,
+      'userEmail': userEmail,
+      'fullName': fullName, // <-- Tambahkan fullName
+      'allowed_users': [userId],
       'bookmarkCount': 0,
       'likes': [],
-      'readCount': 0, // Inisialisasi readCount saat note baru dibuat
+      'readCount': 0,
     });
   }
 
@@ -114,7 +119,6 @@ class FirestoreService {
 
         int totalLikes = 0;
         int totalReads = 0;
-        // Map<Tanggal Penuh, Map<Tipe, Jumlah>>
         Map<DateTime, Map<String, int>> dailyStats = {};
 
         for (var doc in snapshot.docs) {
@@ -124,7 +128,6 @@ class FirestoreService {
           totalReads += (data['readCount'] as int?) ?? 0;
           
           final timestamp = (data['timestamp'] as Timestamp).toDate();
-          // Membuat kunci berdasarkan tanggal (tanpa jam, menit, detik)
           final dayKey = DateTime(timestamp.year, timestamp.month, timestamp.day);
 
           if (!dailyStats.containsKey(dayKey)) {
@@ -142,7 +145,6 @@ class FirestoreService {
         };
       });
   }
-
 
   // Update a note
   Future<void> updateNote(String docID, String newTitle, String newContent,
@@ -273,7 +275,7 @@ class FirestoreService {
   Stream<QuerySnapshot> getTopPicksNotesStream({int limit = 4}) {
     return notes
         .where('isPublic', isEqualTo: true)
-        .orderBy('bookmarkCount', descending: true) // <-- DIKEMBALIKAN ke bookmarkCount
+        .orderBy('bookmarkCount', descending: true)
         .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots();

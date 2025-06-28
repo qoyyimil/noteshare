@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Tambahkan ini
 
 class CreateNoteScreen extends StatefulWidget {
   final String? docID;
@@ -128,8 +129,28 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
         await firestoreService.updateNote(widget.docID!, titleController.text,
             contentController.text, _selectedCategory!, _isPublic);
       } else {
-        await firestoreService.addNote(titleController.text,
-            contentController.text, _selectedCategory!, _isPublic);
+        // Ambil fullName dari Firestore users
+        String fullName = '';
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(_currentUser!.uid)
+              .get();
+          fullName = userDoc.data()?['fullName'] ?? _currentUser!.email ?? 'Anonymous';
+        } catch (e) {
+          fullName = _currentUser!.email ?? 'Anonymous';
+        }
+
+        // Pastikan FirestoreService.addNote menerima parameter tambahan jika perlu
+        await firestoreService.addNote(
+          titleController.text,
+          contentController.text,
+          _selectedCategory!,
+          _isPublic,
+          fullName: fullName,
+          userId: _currentUser!.uid,
+          userEmail: _currentUser!.email,
+        );
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
