@@ -71,7 +71,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _saveProfile() async {
     setState(() => _saving = true);
     try {
-      
       // Update email di Firebase Auth jika berubah
       if (emailController.text.trim() != currentUser!.email) {
         await currentUser!.updateEmail(emailController.text.trim());
@@ -103,6 +102,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
     setState(() => _saving = false);
   }
 
+  Widget _buildStatColumn(String userId, bool isFollowers) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection(isFollowers ? 'followers' : 'following')
+          .snapshots(),
+      builder: (context, snapshot) {
+        final count = snapshot.data?.docs.length ?? 0;
+        return Column(
+          children: [
+            Text(
+              count.toString(),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            Text(
+              isFollowers ? 'Followers' : 'Following',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,7 +141,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         searchController: searchController,
         searchKeyword: '',
         onClearSearch: () {},
-        // onMenuItemSelected: (value, context) {},
         currentUser: currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
@@ -171,14 +201,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                           ),
                                           const SizedBox(height: 12),
                                           Row(
-                                            children: const [
-                                              Text("36", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-                                              SizedBox(width: 4),
-                                              Text("Followers", style: TextStyle(color: Colors.black54)),
-                                              SizedBox(width: 24),
-                                              Text("100", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-                                              SizedBox(width: 4),
-                                              Text("Following", style: TextStyle(color: Colors.black54)),
+                                            children: [
+                                              _buildStatColumn(currentUser!.uid, true),
+                                              const SizedBox(width: 24),
+                                              _buildStatColumn(currentUser!.uid, false),
                                             ],
                                           ),
                                         ],

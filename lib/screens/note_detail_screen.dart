@@ -10,6 +10,7 @@ import 'package:noteshare/widgets/delete_confirmation_dialog.dart';
 import 'package:noteshare/widgets/report_dialog.dart';
 import 'package:noteshare/widgets/share_dialog.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
+import 'package:noteshare/screens/edit_profile.dart'; // Tambahkan ini
 
 class NoteDetailScreen extends StatefulWidget {
   final String noteId;
@@ -228,9 +229,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         : 'A few seconds ago';
 
     final int readCount = data['readCount'] ?? 0;
-    final String userEmail = data['userEmail'] ?? 'Anonymous User';
+    final String userFullName = data['userFullName'] ?? 'Anonymous User';
     final String firstLetter =
-        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'A';
+        userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
 
     return Row(
       children: [
@@ -247,18 +248,18 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(userEmail,
+              Text(userFullName,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.lato(
                       fontWeight: FontWeight.bold, fontSize: 16)),
               Row(
                 children: [
                   Text(formattedTime,
-                      style:
-                          GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+                      style: GoogleFonts.lato(
+                          color: subtleTextColor, fontSize: 14)),
                   Text(' • $readCount views',
-                      style:
-                          GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+                      style: GoogleFonts.lato(
+                          color: subtleTextColor, fontSize: 14)),
                 ],
               ),
             ],
@@ -417,9 +418,10 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   }
 
   Widget _buildAuthorFooter(Map<String, dynamic> data, bool isMyNote) {
-    final String userEmail = data['userEmail'] ?? 'Anonymous User';
+    final String userFullName = data['userFullName'] ?? 'Anonymous User';
     final String firstLetter =
-        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'A';
+        userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
+    final String ownerId = data['ownerId'] ?? '';
 
     return Row(
       children: [
@@ -435,27 +437,75 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Written by $userEmail',
+            Text('Written by $userFullName',
                 style: GoogleFonts.lato(
                     fontWeight: FontWeight.bold, fontSize: 16)),
-            Text('0 Followers • 4k Following',
-                style: GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+            Row(
+              children: [
+                StreamBuilder<int>(
+                  stream: _firestoreService.getFollowersCount(ownerId),
+                  builder: (context, snapshot) {
+                    final followers = snapshot.data ?? 0;
+                    return Text('$followers Followers',
+                        style: GoogleFonts.lato(
+                            color: subtleTextColor, fontSize: 14));
+                  },
+                ),
+                const SizedBox(width: 8),
+                StreamBuilder<int>(
+                  stream: _firestoreService.getFollowingCount(ownerId),
+                  builder: (context, snapshot) {
+                    final following = snapshot.data ?? 0;
+                    return Text('• $following Following',
+                        style: GoogleFonts.lato(
+                            color: subtleTextColor, fontSize: 14));
+                  },
+                ),
+              ],
+            ),
           ],
         ),
         const Spacer(),
-        ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isMyNote ? Colors.white : primaryBlue,
-            foregroundColor: isMyNote ? primaryBlue : Colors.white,
-            side: isMyNote
-                ? const BorderSide(color: primaryBlue)
-                : BorderSide.none,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        if (isMyNote)
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const EditProfilePage()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: primaryBlue,
+              side: const BorderSide(color: primaryBlue),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+            ),
+            child: const Text('Edit Profile'),
+          )
+        else
+          StreamBuilder<bool>(
+            stream: _firestoreService.isFollowingUser(ownerId),
+            builder: (context, snapshot) {
+              final isFollowing = snapshot.data ?? false;
+              return ElevatedButton(
+                onPressed: () async {
+                  await _firestoreService.toggleFollowUser(ownerId);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isFollowing ? Colors.white : primaryBlue,
+                  foregroundColor: isFollowing ? primaryBlue : Colors.white,
+                  side: isFollowing
+                      ? const BorderSide(color: primaryBlue)
+                      : BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                ),
+                child: Text(isFollowing ? 'Following' : 'Follow'),
+              );
+            },
           ),
-          child: Text(isMyNote ? 'Edit Profile' : 'Follow'),
-        )
       ],
     );
   }

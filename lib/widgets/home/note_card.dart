@@ -29,8 +29,8 @@ class NoteCard extends StatelessWidget {
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
     final formattedDate = timestamp != null ? DateFormat('d MMM', 'id_ID').format(timestamp) : '';
 
-    final String userEmail = data['userEmail'] ?? 'User';
-    final String firstLetter = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
+    final String userFullName = data['userFullName'] ?? 'User';
+    final String firstLetter = userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'U';
 
     return InkWell(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => NoteDetailScreen(noteId: docId))),
@@ -47,7 +47,7 @@ class NoteCard extends StatelessWidget {
                   Row(
                     children: [
                       CircleAvatar(
-                        radius: 12,
+                        radius: 15,
                         backgroundColor: primaryBlue,
                         child: Text(
                           firstLetter,
@@ -55,7 +55,7 @@ class NoteCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(userEmail, style: GoogleFonts.lato(fontSize: 14, color: textColor)),
+                      Text(userFullName, style: GoogleFonts.lato(fontSize: 18, color: textColor)),
                     ],
                   ),
                   const SizedBox(height: 12),

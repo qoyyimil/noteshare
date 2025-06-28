@@ -100,44 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Callback untuk PopupMenuButton di AppBar
-  void _onMenuItemSelected(String value, BuildContext context) {
-    switch (value) {
-      case 'profile':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfilePage()),
-        );
-        break;
-      case 'notes':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MyNotesScreen()),
-        );
-        break;
-      case 'library':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MyBookmarksScreen()),
-        );
-        break;
-      case 'logout':
-        final authService = Provider.of<AuthService>(context, listen: false);
-        authService.signOut();
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const AuthGate()),
-          (route) => false,
-        );
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('The feature "$value" is not available yet.')),
-        );
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -291,9 +253,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
           final filteredUsers = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            final email = (data['email'] ?? '').toLowerCase();
+            final fullName = (data['fullName'] ?? '').toLowerCase();
             final userName = (data['userName'] ?? '').toLowerCase();
-            return email.contains(_searchKeyword) ||
+            return fullName.contains(_searchKeyword) ||
                 userName.contains(_searchKeyword);
           }).toList();
 
@@ -307,8 +269,8 @@ class _HomeScreenState extends State<HomeScreen> {
               final userData =
                   filteredUsers[index].data() as Map<String, dynamic>;
               final userId = filteredUsers[index].id; // Dapatkan UID pengguna
-              final userName = userData['userName'] ??
-                  userData['email']; // Ambil nama atau email
+              final userName = userData['fullName'] ??
+                  userData['No Name']; // Ambil nama atau email
 
               return PeopleCard(
                 data: userData,

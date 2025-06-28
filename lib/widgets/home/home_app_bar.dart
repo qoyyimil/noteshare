@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,7 +8,7 @@ import 'package:noteshare/screens/profile.dart';
 import 'package:noteshare/screens/my_bookmarks_screen.dart';
 import 'package:noteshare/screens/my_notes_screen.dart';
 import 'package:noteshare/screens/login_screen.dart';
-import 'package:noteshare/screens/statistics_screen.dart'; // <-- IMPORT HALAMAN STATISTIK
+import 'package:noteshare/screens/statistics_screen.dart'; 
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchController;
@@ -29,7 +30,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.sidebarBgColor,
   });
 
-  // --- FUNGSI NAVIGASI DIPERBARUI DI SINI ---
   void _onMenuItemSelected(String value, BuildContext context) async {
     if (value == 'profile') {
       Navigator.push(
@@ -46,7 +46,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         context,
         MaterialPageRoute(builder: (context) => const MyNotesScreen()),
       );
-    } else if (value == 'stats') { // <-- KONDISI BARU DITAMBAHKAN
+          } else if (value == 'stats') { // <-- KONDISI BARU DITAMBAHKAN
       if (currentUser != null) {
         Navigator.push(
           context,
@@ -202,16 +202,34 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ),
                   ),
                 ],
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: primaryBlue,
-                  child: Text(
-                    (currentUser?.email?.isNotEmpty ?? false)
-                        ? currentUser!.email![0].toUpperCase()
-                        : 'U',
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+                child: FutureBuilder<DocumentSnapshot>(
+                  future: currentUser != null
+                      ? FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(currentUser!.uid)
+                          .get()
+                      : null,
+                  builder: (context, snapshot) {
+                    String displayLetter = 'U';
+                    if (snapshot.hasData && snapshot.data!.exists) {
+                      final userData = snapshot.data!.data() as Map<String, dynamic>?;
+                      final fullName = (userData?['fullName'] ?? '').toString();
+                      if (fullName.isNotEmpty) {
+                        displayLetter = fullName[0].toUpperCase();
+                      }
+                    } else if (currentUser?.displayName != null && currentUser!.displayName!.isNotEmpty) {
+                      displayLetter = currentUser!.displayName![0].toUpperCase();
+                    }
+                    return CircleAvatar(
+                      radius: 18,
+                      backgroundColor: primaryBlue,
+                      child: Text(
+                        displayLetter,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 16),

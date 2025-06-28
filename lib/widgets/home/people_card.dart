@@ -21,7 +21,7 @@ class PeopleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final email = data['email'] ?? 'No email';
+    final email = data['fullName'] ?? 'No name';
     final String firstLetter = email.isNotEmpty ? email[0].toUpperCase() : 'U';
 
     return InkWell(
