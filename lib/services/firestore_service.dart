@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+// --- TAMBAHAN: Enum untuk tipe notifikasi agar lebih mudah dikelola ---
+enum NotificationType { like, comment, follow }
+
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -14,6 +17,75 @@ class FirestoreService {
     users = _firestore.collection('users');
     reports = _firestore.collection('reports');
   }
+
+  // --- FUNGSI BARU UNTUK NOTIFIKASI ---
+
+  // Membuat notifikasi baru untuk pengguna tertentu
+  Future<void> addNotification({
+    required String targetUserId, // UID pengguna yang akan menerima notif
+    required NotificationType type,
+    required String fromUserName,
+    String? noteId,
+    String? noteTitle,
+  }) async {
+    // Jangan kirim notif jika pengguna berinteraksi dengan dirinya sendiri
+    final currentUser = _auth.currentUser;
+    if (currentUser == null || targetUserId == currentUser.uid) return;
+
+    await users.doc(targetUserId).collection('notifications').add({
+      'type': type.name, // 'like', 'comment', 'follow'
+      'fromUserId': currentUser.uid,
+      'fromUserName': fromUserName,
+      'noteId': noteId,
+      'noteTitle': noteTitle,
+      'timestamp': Timestamp.now(),
+      'isRead': false,
+    });
+  }
+
+  // Mendapatkan stream notifikasi untuk pengguna saat ini
+  Stream<QuerySnapshot> getNotificationsStream() {
+    final user = _auth.currentUser;
+    if (user == null) return const Stream.empty();
+    return users
+        .doc(user.uid)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+  
+  // Mendapatkan jumlah notifikasi yang belum dibaca
+  Stream<int> getUnreadNotificationsCountStream() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(0);
+    return users
+        .doc(user.uid)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  // Menandai semua notifikasi sebagai sudah dibaca
+  Future<void> markAllNotificationsAsRead() async {
+     final user = _auth.currentUser;
+    if (user == null) return;
+    
+    final unreadNotifs = await users
+        .doc(user.uid)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    WriteBatch batch = _firestore.batch();
+    for (var doc in unreadNotifs.docs) {
+      batch.update(doc.reference, {'isRead': true});
+    }
+    await batch.commit();
+  }
+
+
+  // --- FUNGSI LAMA DENGAN PENAMBAHAN LOGIKA NOTIFIKASI ---
 
   // Save user record
   Future<void> saveUserRecord(User user) {
@@ -100,14 +172,12 @@ class FirestoreService {
     return notes.doc(noteId).snapshots();
   }
 
-  // --- FUNGSI UNTUK MENAIKKAN JUMLAH PEMBACA ---
   Future<void> incrementReadCount(String noteId) {
     return notes.doc(noteId).update({
       'readCount': FieldValue.increment(1),
     });
   }
 
-  // --- FUNGSI STATISTIK YANG DIPERBAIKI ---
   Stream<Map<String, dynamic>> getNotesAndStatsForUser(String userId) {
     return notes.where('ownerId', isEqualTo: userId)
       .orderBy('timestamp', descending: true)
@@ -164,15 +234,28 @@ class FirestoreService {
   }
 
   // Toggle like on a note
-  Future<void> toggleLike(String noteId, String userId, bool isLiked) {
+  Future<void> toggleLike(String noteId, String userId, bool isLiked) async { // <-- Diubah menjadi async
+    final noteRef = notes.doc(noteId);
     if (isLiked) {
-      return notes.doc(noteId).update({
+      await noteRef.update({ // <-- Ditambah await
         'likes': FieldValue.arrayRemove([userId])
       });
     } else {
-      return notes.doc(noteId).update({
+      await noteRef.update({ // <-- Ditambah await
         'likes': FieldValue.arrayUnion([userId])
       });
+      // --- TAMBAHAN: Kirim notifikasi like ---
+      final noteDoc = await noteRef.get();
+      if (noteDoc.exists) {
+        final noteData = noteDoc.data() as Map<String, dynamic>;
+        await addNotification(
+          targetUserId: noteData['ownerId'], 
+          type: NotificationType.like, 
+          fromUserName: _auth.currentUser?.displayName ?? _auth.currentUser?.email ?? "Someone", 
+          noteId: noteId,
+          noteTitle: noteData['title']
+        );
+      }
     }
   }
 
@@ -192,8 +275,8 @@ class FirestoreService {
     required String userId,
     required String userEmail,
     String? parentCommentId,
-  }) {
-    return notes.doc(noteId).collection('comments').add({
+  }) async { // <-- Diubah menjadi async
+    await notes.doc(noteId).collection('comments').add({ // <-- Ditambah await
       'text': text,
       'userId': userId,
       'userEmail': userEmail,
@@ -201,6 +284,18 @@ class FirestoreService {
       'parentCommentId': parentCommentId,
       'likes': [],
     });
+    // --- TAMBAHAN: Kirim notifikasi komentar ---
+    final noteDoc = await notes.doc(noteId).get();
+    if (noteDoc.exists) {
+      final noteData = noteDoc.data() as Map<String, dynamic>;
+      await addNotification(
+        targetUserId: noteData['ownerId'], 
+        type: NotificationType.comment, 
+        fromUserName: userEmail,
+        noteId: noteId,
+        noteTitle: noteData['title']
+      );
+    }
   }
 
   Future<void> deleteComment(String noteId, String commentId) async {
@@ -271,7 +366,6 @@ class FirestoreService {
         .map((snapshot) => snapshot.exists);
   }
 
-  // Get top picks notes (diurutkan berdasarkan jumlah bookmark)
   Stream<QuerySnapshot> getTopPicksNotesStream({int limit = 4}) {
     return notes
         .where('isPublic', isEqualTo: true)
@@ -335,6 +429,12 @@ class FirestoreService {
         'userId': user.uid,
         'timestamp': FieldValue.serverTimestamp(),
       });
+      // --- TAMBAHAN: Kirim notifikasi follow ---
+      await addNotification(
+        targetUserId: targetUserId, 
+        type: NotificationType.follow, 
+        fromUserName: user.displayName ?? user.email ?? "Someone"
+      );
     }
   }
 

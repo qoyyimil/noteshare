@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/screens/home_screen.dart';
-import 'package:noteshare/screens/profile.dart';
+import 'package:noteshare/screens/login_screen.dart';
 import 'package:noteshare/screens/my_bookmarks_screen.dart';
 import 'package:noteshare/screens/my_notes_screen.dart';
-import 'package:noteshare/screens/login_screen.dart';
-import 'package:noteshare/screens/statistics_screen.dart'; 
+import 'package:noteshare/screens/notifications_screen.dart';
+import 'package:noteshare/screens/profile.dart';
+import 'package:noteshare/screens/statistics_screen.dart';
+import 'package:noteshare/services/firestore_service.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchController;
@@ -46,11 +48,12 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         context,
         MaterialPageRoute(builder: (context) => const MyNotesScreen()),
       );
-          } else if (value == 'stats') { // <-- KONDISI BARU DITAMBAHKAN
+    } else if (value == 'stats') {
       if (currentUser != null) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => StatisticsScreen(userId: currentUser!.uid)),
+          MaterialPageRoute(
+              builder: (context) => StatisticsScreen(userId: currentUser!.uid)),
         );
       }
     } else if (value == 'logout') {
@@ -65,6 +68,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FirestoreService firestoreService = FirestoreService();
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
@@ -81,7 +85,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: GestureDetector(
                   onTap: () {
-                    // Navigate to home screen when logo is tapped
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
@@ -114,8 +117,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     decoration: InputDecoration(
                       hintText: 'Search notes or users...',
                       hintStyle: TextStyle(color: subtleTextColor),
-                      prefixIcon: const Icon(Icons.search,
-                          size: 20, color: Colors.grey),
+                      prefixIcon:
+                          const Icon(Icons.search, size: 20, color: Colors.grey),
                       suffixIcon: searchKeyword.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear,
@@ -125,8 +128,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                           : null,
                       filled: true,
                       fillColor: sidebarBgColor,
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 0, horizontal: 0),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -153,10 +156,26 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton(
-                onPressed: () {},
-                icon: Icon(Icons.notifications_none, color: subtleTextColor),
-                tooltip: 'Notifications',
+              // --- Tombol Notifikasi yang Diperbarui ---
+              StreamBuilder<int>(
+                stream: firestoreService.getUnreadNotificationsCountStream(),
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data ?? 0;
+                  return Badge(
+                    label: Text('$unreadCount'),
+                    isLabelVisible: unreadCount > 0,
+                    child: IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                        );
+                      },
+                      icon: Icon(Icons.notifications_none, color: subtleTextColor),
+                      tooltip: 'Notifications',
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 8),
               PopupMenuButton<String>(
@@ -212,13 +231,16 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   builder: (context, snapshot) {
                     String displayLetter = 'U';
                     if (snapshot.hasData && snapshot.data!.exists) {
-                      final userData = snapshot.data!.data() as Map<String, dynamic>?;
+                      final userData =
+                          snapshot.data!.data() as Map<String, dynamic>?;
                       final fullName = (userData?['fullName'] ?? '').toString();
                       if (fullName.isNotEmpty) {
                         displayLetter = fullName[0].toUpperCase();
                       }
-                    } else if (currentUser?.displayName != null && currentUser!.displayName!.isNotEmpty) {
-                      displayLetter = currentUser!.displayName![0].toUpperCase();
+                    } else if (currentUser?.displayName != null &&
+                        currentUser!.displayName!.isNotEmpty) {
+                      displayLetter =
+                          currentUser!.displayName![0].toUpperCase();
                     }
                     return CircleAvatar(
                       radius: 18,
