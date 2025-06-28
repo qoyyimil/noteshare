@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/widgets/home/home_app_bar.dart'; // Import HomeAppBar
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
 
 class StatisticsScreen extends StatefulWidget {
   final String userId;
@@ -18,6 +20,16 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final FirestoreService _firestoreService = FirestoreService();
+  final User? _currentUser = FirebaseAuth.instance.currentUser; // Get current user
+
+  // UI Colors & Styles from MyBookmarksScreen/HomeScreen for consistency
+  static const Color primaryBlue = Color(0xFF3B82F6);
+  static const Color textColor = Color(0xFF1F2937);
+  static const Color subtleTextColor = Color(0xFF6B7280);
+  static const Color bgColor = Color(0xFFFFFFFF);
+
+  // Dummy controllers for HomeAppBar that are not used in this screen
+  final TextEditingController _dummySearchController = TextEditingController();
 
   @override
   void initState() {
@@ -28,6 +40,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _dummySearchController.dispose(); // Dispose dummy controller
     super.dispose();
   }
   
@@ -41,8 +54,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     } else if (maxDataValue <= 100) {
       return {'maxY': ( (maxDataValue / 10).ceil() * 10.0) + 10, 'interval': 10.0};
     } else {
-       double interval = pow(10, (log(maxDataValue) / log(10)).floor()).toDouble();
-       return {'maxY': ((maxDataValue / interval).ceil() * interval) + interval, 'interval': interval / 2};
+        double interval = pow(10, (log(maxDataValue) / log(10)).floor()).toDouble();
+        return {'maxY': ((maxDataValue / interval).ceil() * interval) + interval, 'interval': interval / 2};
     }
   }
 
@@ -50,27 +63,44 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Your Statistics", style: GoogleFonts.lato()),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: const Color(0xFF3B82F6),
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF3B82F6),
-          tabs: const [
-            Tab(text: 'Notes Stats'),
-            Tab(text: 'Audience Stats'),
-          ],
-        ),
+      backgroundColor: bgColor, // Set background color for consistency
+      appBar: HomeAppBar(
+        // Pass dummy values for search-related parameters as they are not used on this screen
+        searchController: _dummySearchController,
+        searchKeyword: '',
+        onClearSearch: () {},
+        currentUser: _currentUser, // Pass current user
+        primaryBlue: primaryBlue,
+        subtleTextColor: subtleTextColor,
+        sidebarBgColor: bgColor,
+        // Kita tidak bisa menggunakan 'title' di sini karena HomeAppBar yang Anda miliki tidak punya parameter itu
+        // Kita juga tidak bisa menggunakan 'bottomWidget' di sini.
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column( // Menggunakan Column untuk menampung TabBar dan TabBarView
         children: [
-          _buildNotesStatsView(),
-          _buildAudienceStatsView(),
+          // TabBar diletakkan di sini, tepat di bawah AppBar
+          Container(
+            color: Colors.white, // Sesuaikan warna latar belakang TabBar
+            child: TabBar(
+              controller: _tabController,
+              labelColor: primaryBlue, // Menggunakan warna dari tema
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: primaryBlue, // Menggunakan warna dari tema
+              tabs: const [
+                Tab(text: 'Notes Stats'),
+                Tab(text: 'Audience Stats'),
+              ],
+            ),
+          ),
+          Expanded( // Expanded agar TabBarView mengisi sisa ruang
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildNotesStatsView(),
+                _buildAudienceStatsView(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -84,7 +114,10 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           return const Center(child: CircularProgressIndicator());
         }
         if (!snapshot.hasData || snapshot.data!['dailyStats'].isEmpty) {
-          return const Center(child: Text("No data to display."));
+          return Center(child: Text(
+            "No data to display.",
+            style: GoogleFonts.lato(color: subtleTextColor)
+          ));
         }
 
         final stats = snapshot.data!;
@@ -121,7 +154,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Performance Summary", style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold)),
+              // Judul "Performance Summary" dll. tetap di dalam SingleChildScrollView
+              Text("Performance Summary", style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -132,7 +166,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               ),
               
               const SizedBox(height: 32),
-              Text("Daily Views", style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold)),
+              Text("Daily Views", style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
               const SizedBox(height: 16),
               _buildChart(
                 spots: readsSpots, 
@@ -142,7 +176,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               ),
 
               const SizedBox(height: 32),
-              Text("Daily Likes", style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold)),
+              Text("Daily Likes", style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
               const SizedBox(height: 16),
               _buildChart(
                 spots: likesSpots, 
@@ -158,9 +192,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  // --- PERBAIKAN: Mengganti AspectRatio dengan SizedBox ---
   Widget _buildChart({required List<FlSpot> spots, required Color color, required double maxY, required double intervalY}) {
-     return SizedBox(
+      return SizedBox(
       height: 250, // Memberikan tinggi tetap pada grafik
       child: LineChart(
         LineChartData(
@@ -172,6 +205,9 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 showTitles: true, 
                 reservedSize: 40,
                 interval: intervalY,
+                 getTitlesWidget: (value, meta) {
+                  return Text(value.toInt().toString(), style: TextStyle(color: subtleTextColor, fontSize: 10));
+                 },
               )
             ),
             bottomTitles: AxisTitles(
@@ -184,7 +220,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                   return SideTitleWidget(
                     axisSide: meta.axisSide,
                     space: 8.0,
-                    child: Text(DateFormat('d/M').format(date), style: const TextStyle(fontSize: 10)),
+                    child: Text(DateFormat('d/M').format(date), style: TextStyle(fontSize: 10, color: subtleTextColor)),
                   );
                 },
               ),
@@ -217,9 +253,9 @@ class _StatisticsScreenState extends State<StatisticsScreen>
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(
           children: [
-            Text(value, style: GoogleFonts.lato(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF3B82F6))),
+            Text(value, style: GoogleFonts.lato(fontSize: 28, fontWeight: FontWeight.bold, color: primaryBlue)),
             const SizedBox(height: 4),
-            Text(title, style: GoogleFonts.lato(fontSize: 16, color: Colors.grey.shade600)),
+            Text(title, style: GoogleFonts.lato(fontSize: 16, color: subtleTextColor)),
           ],
         ),
       ),
@@ -246,13 +282,13 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Audience Overview", style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold)),
+                    Text("Audience Overview", style: GoogleFonts.lato(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
                     const SizedBox(height: 24),
                     _buildStatsCard("Followers", followers.toString()),
                     const SizedBox(height: 16),
                     _buildStatsCard("Following", following.toString()),
-                     const SizedBox(height: 32),
-                    Text("More audience analytics coming soon!", style: GoogleFonts.lato(color: Colors.grey)),
+                    const SizedBox(height: 32),
+                    Text("More audience analytics coming soon!", style: GoogleFonts.lato(color: subtleTextColor)),
                   ],
                 ),
               ),
