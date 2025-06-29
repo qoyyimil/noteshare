@@ -41,7 +41,7 @@ flutter run -d chrome
 
 * 🔐 Registrasi dan login (email & Google)
 * 📖 Membuat, mengedit, dan menghapus catatan
-* 🔍 Pencarian catatan berdasarkan kata kunci, kategori, dan tag
+* 🔍 Pencarian catatan berdasarkan kata kunci, kategori, dan nama pengguna
 * 💬 Komentar dan diskusi di setiap catatan
 * ⚠️ Pelaporan konten tidak pantas
 * 💰 Monetisasi catatan oleh penulis premium
