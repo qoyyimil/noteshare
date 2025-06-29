@@ -3,17 +3,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
+import 'package:noteshare/screens/edit_profile.dart';
+import 'package:noteshare/screens/profile.dart';
+import 'package:noteshare/screens/public_profile.dart';
+import 'package:noteshare/screens/top_up_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/comment_section.dart';
 import 'package:noteshare/widgets/delete_confirmation_dialog.dart';
 import 'package:noteshare/widgets/report_dialog.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
 import 'package:noteshare/widgets/share_dialog.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
-import 'package:noteshare/screens/edit_profile.dart';
-import 'package:noteshare/screens/top_up_screen.dart';
-import 'package:noteshare/screens/public_profile.dart';
-import 'package:noteshare/screens/profile.dart';
+import 'package:provider/provider.dart';
 
 class NoteDetailScreen extends StatefulWidget {
   final String noteId;
@@ -147,82 +150,89 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       backgroundColor: backgroundColor,
       appBar: HomeAppBar(
         searchController: _searchController,
-        searchKeyword: _searchController.text,
-        onClearSearch: _onClearSearch,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: backgroundColor,
+        sidebarBgColor: backgroundColor, searchKeyword: '', onClearSearch: () {  },
+        // searchKeyword dan onClearSearch DIHAPUS
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: _firestoreService.getNoteStream(widget.noteId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !_isPurchasing) {
-            return const Center(child: CircularProgressIndicator());
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
           }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text("Note not found."));
-          }
+          return child!;
+        },
+        child: StreamBuilder<DocumentSnapshot>(
+          stream: _firestoreService.getNoteStream(widget.noteId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !_isPurchasing) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || !snapshot.data!.exists) {
+              return const Center(child: Text("Note not found."));
+            }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          final bool isMyNote = data['ownerId'] == _currentUser?.uid;
-          final bool isPremium = data['isPremium'] ?? false;
-          final List purchasedBy = data['purchasedBy'] ?? [];
-          final bool hasPurchased = purchasedBy.contains(_currentUser?.uid);
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            final bool isMyNote = data['ownerId'] == _currentUser?.uid;
+            final bool isPremium = data['isPremium'] ?? false;
+            final List purchasedBy = data['purchasedBy'] ?? [];
+            final bool hasPurchased = purchasedBy.contains(_currentUser?.uid);
 
-          final bool canViewContent = !isPremium || isMyNote || hasPurchased;
+            final bool canViewContent = !isPremium || isMyNote || hasPurchased;
 
-          final commentStream =
-              _firestoreService.getCommentsStream(widget.noteId);
+            final commentStream =
+                _firestoreService.getCommentsStream(widget.noteId);
 
-          return SingleChildScrollView(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 700),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildNoteTitle(data),
-                      const SizedBox(height: 16),
-                      _buildAuthorHeader(data, isMyNote),
-                      const SizedBox(height: 24),
-                      _buildNoteActions(data, isMyNote),
-                      const SizedBox(height: 24),
-                      if (canViewContent)
-                        _buildNoteContent(data)
-                      else
-                        _buildLockedContent(context, data),
-                      const SizedBox(height: 24),
-                      _buildTagsSection(data),
-                      const SizedBox(height: 32),
-                      const Divider(),
-                      const SizedBox(height: 32),
-                      _buildAuthorFooter(data, isMyNote),
-                      const SizedBox(height: 48),
-                      StreamBuilder<QuerySnapshot>(
-                          stream: commentStream,
-                          builder: (context, commentSnapshot) {
-                            final comments = commentSnapshot.data?.docs ?? [];
-                            return KeyedSubtree(
-                              key: _commentSectionKey,
-                              child: CommentSection(
-                                noteId: widget.noteId,
-                                firestoreService: _firestoreService,
-                                currentUser: _currentUser,
-                                comments: comments,
-                              ),
-                            );
-                          }),
-                    ],
+            return SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 700),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildNoteTitle(data),
+                        const SizedBox(height: 16),
+                        _buildAuthorHeader(data, isMyNote),
+                        const SizedBox(height: 24),
+                        _buildNoteActions(data, isMyNote),
+                        const SizedBox(height: 24),
+                        if (canViewContent)
+                          _buildNoteContent(data)
+                        else
+                          _buildLockedContent(context, data),
+                        const SizedBox(height: 24),
+                        _buildTagsSection(data),
+                        const SizedBox(height: 32),
+                        const Divider(),
+                        const SizedBox(height: 32),
+                        _buildAuthorFooter(data, isMyNote),
+                        const SizedBox(height: 48),
+                        StreamBuilder<QuerySnapshot>(
+                            stream: commentStream,
+                            builder: (context, commentSnapshot) {
+                              final comments = commentSnapshot.data?.docs ?? [];
+                              return KeyedSubtree(
+                                key: _commentSectionKey,
+                                child: CommentSection(
+                                  noteId: widget.noteId,
+                                  firestoreService: _firestoreService,
+                                  currentUser: _currentUser,
+                                  comments: comments,
+                                ),
+                              );
+                            }),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

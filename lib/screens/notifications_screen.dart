@@ -1,11 +1,16 @@
 // lib/screens/notifications_screen.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/screens/note_detail_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/widgets/home/home_app_bar.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -17,6 +22,8 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   String _selectedFilter = 'All';
+  final TextEditingController _searchController = TextEditingController();
+  final User? _currentUser = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {
@@ -30,74 +37,81 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+      appBar: HomeAppBar(
+        searchController: _searchController,
+        currentUser: _currentUser,
+        primaryBlue: const Color(0xFF3B82F6),
+        subtleTextColor: const Color(0xFF6B7280),
+        sidebarBgColor: Colors.white, searchKeyword: '', onClearSearch: () {  },
+        // searchKeyword dan onClearSearch DIHAPUS
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestoreService.getNotificationsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
           }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          final allNotifs = snapshot.data!.docs;
-          
-          final filteredNotifs = allNotifs.where((doc) {
-            final type = doc['type'] as String;
-            switch (_selectedFilter) {
-              case 'Likes':
-                return type == 'like';
-              case 'Comment':
-                return type == 'comment';
-              case 'Follow':
-                return type == 'follow';
-              case 'Purchases': // Filter baru
-                return type == 'purchase';
-              case 'All':
-              default:
-                return true;
-            }
-          }).toList();
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Notification",
-                  style: GoogleFonts.lato(
-                      fontSize: 32, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 24),
-                _buildFilterTabs(),
-                const SizedBox(height: 8),
-                const Divider(),
-                Expanded(
-                  child: filteredNotifs.isEmpty
-                      ? const Center(child: Text("No notifications in this category."))
-                      : ListView.separated(
-                          padding: const EdgeInsets.only(top: 16),
-                          itemCount: filteredNotifs.length,
-                          itemBuilder: (context, index) {
-                            final data = filteredNotifs[index].data() as Map<String, dynamic>;
-                            return _buildNotificationItem(data, filteredNotifs[index].id);
-                          },
-                          separatorBuilder: (context, index) => const Divider(),
-                        ),
-                ),
-              ],
-            ),
-          );
+          return child!;
         },
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _firestoreService.getNotificationsStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return _buildEmptyState();
+            }
+
+            final allNotifs = snapshot.data!.docs;
+            final filteredNotifs = allNotifs.where((doc) {
+              final type = doc['type'] as String;
+              switch (_selectedFilter) {
+                case 'Likes':
+                  return type == 'like';
+                case 'Comment':
+                  return type == 'comment';
+                case 'Follow':
+                  return type == 'follow';
+                case 'Purchases':
+                  return type == 'purchase';
+                case 'All':
+                default:
+                  return true;
+              }
+            }).toList();
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Notification",
+                    style: GoogleFonts.lato(
+                        fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildFilterTabs(),
+                  const SizedBox(height: 8),
+                  const Divider(),
+                  Expanded(
+                    child: filteredNotifs.isEmpty
+                        ? const Center(child: Text("No notifications in this category."))
+                        : ListView.separated(
+                            padding: const EdgeInsets.only(top: 16),
+                            itemCount: filteredNotifs.length,
+                            itemBuilder: (context, index) {
+                              final data = filteredNotifs[index].data() as Map<String, dynamic>;
+                              return _buildNotificationItem(data, filteredNotifs[index].id);
+                            },
+                            separatorBuilder: (context, index) => const Divider(),
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

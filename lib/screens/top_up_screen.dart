@@ -6,6 +6,9 @@ import 'package:noteshare/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:noteshare/widgets/success_dialog.dart'; // Import the new dialog
+import 'package:noteshare/providers/search_provider.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 
 class TopUpScreen extends StatefulWidget {
   const TopUpScreen({super.key});
@@ -70,6 +73,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
     {'coins': 1000, 'price': 159000, 'bonus': 200, 'color': Colors.orange.shade400, 'label': 'Best Value'},
   ];
 
+  final TextEditingController _searchController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,31 +83,39 @@ class _TopUpScreenState extends State<TopUpScreen> {
         backgroundColor: Colors.white,
         elevation: 1,
       ),
-      body: _isLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text("Processing payment...", style: GoogleFonts.lato()),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: coinPackages.length,
-              itemBuilder: (context, index) {
-                final package = coinPackages[index];
-                return _buildCoinPackage(
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
+          }
+          return child!;
+        },
+        child: _isLoading
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text("Processing payment...", style: GoogleFonts.lato()),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.all(16.0),
+                itemCount: coinPackages.length,
+                itemBuilder: (context, index) {
+                  final package = coinPackages[index];
+                  return _buildCoinPackage(
                     coins: package['coins'],
                     price: package['price'],
                     bonus: package['bonus'],
                     color: package['color'],
                     label: package['label'],
-                );
-              },
-            ),
+                  );
+                },
+              ),
+      ),
     );
   }
 

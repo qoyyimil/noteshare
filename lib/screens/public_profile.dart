@@ -2,9 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/home/note_card.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String userId;
@@ -105,14 +108,20 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       backgroundColor: Colors.white,
       appBar: HomeAppBar(
         searchController: _searchController,
-        searchKeyword: _searchController.text,
-        onClearSearch: _onClearSearch,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: sidebarBgColor,
+        sidebarBgColor: sidebarBgColor, searchKeyword: '', onClearSearch: () {  },
       ),
-      body: _buildBody(isDesktop),
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
+          }
+          return child!;
+        },
+        child: _buildBody(isDesktop),
+      ),
     );
   }
 

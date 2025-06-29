@@ -20,7 +20,7 @@ class AuthGate extends StatelessWidget {
           // Jika pengguna BELUM login
           else {
             // Tampilkan Landing Page, BUKAN halaman login/register
-            return const LandingScreen(); 
+            return const LandingScreen();  
           }
         },
       ),

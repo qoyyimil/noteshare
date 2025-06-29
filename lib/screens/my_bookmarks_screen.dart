@@ -3,9 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/screens/note_detail_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 
 class MyBookmarksScreen extends StatefulWidget {
   const MyBookmarksScreen({super.key});
@@ -39,58 +42,61 @@ class _MyBookmarksScreenState extends State<MyBookmarksScreen> {
     super.dispose();
   }
 
-  void _onClearSearch() {
-    _searchController.clear();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: HomeAppBar(
         searchController: _searchController,
-        searchKeyword: _searchController.text,
-        onClearSearch: _onClearSearch,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: bgColor,
+        sidebarBgColor: bgColor, searchKeyword: '', onClearSearch: () {  },
+        // searchKeyword dan onClearSearch DIHAPUS
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _firestoreService.getUserBookmarksStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
           }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return child!;
+        },
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _firestoreService.getUserBookmarksStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(
+                child: Text(
+                  "You haven't saved any notes yet.",
+                  style: GoogleFonts.lato(fontSize: 16, color: Colors.grey),
+                ),
+              );
+            }
+
+            final bookmarkedNotes = snapshot.data!;
+
             return Center(
-              child: Text(
-                "You haven't saved any notes yet.",
-                style: GoogleFonts.lato(fontSize: 16, color: Colors.grey),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: bookmarkedNotes.length,
+                  itemBuilder: (context, index) {
+                    final noteData = bookmarkedNotes[index];
+                    final docId = noteData['id'];
+                    return _buildNoteCard(docId, noteData);
+                  },
+                ),
               ),
             );
-          }
-
-          final bookmarkedNotes = snapshot.data!;
-
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 700),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: bookmarkedNotes.length,
-                itemBuilder: (context, index) {
-                  final noteData = bookmarkedNotes[index];
-                  final docId = noteData['id'];
-                  return _buildNoteCard(docId, noteData);
-                },
-              ),
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

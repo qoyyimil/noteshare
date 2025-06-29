@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
+import 'package:noteshare/providers/search_provider.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 
 class MyNotesScreen extends StatefulWidget {
   const MyNotesScreen({super.key});
@@ -48,67 +51,73 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
       backgroundColor: bgColor,
       appBar: HomeAppBar(
         searchController: _searchController,
-        searchKeyword: _searchController.text,
-        onClearSearch: _onClearSearch,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: bgColor,
+        sidebarBgColor: bgColor, searchKeyword: '', onClearSearch: () {  },
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: firestoreService.getMyNotesStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
           }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return child!;
+        },
+        child: StreamBuilder<QuerySnapshot>(
+          stream: firestoreService.getMyNotesStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Center(
+                child: Text(
+                  "You haven't written any notes yet.",
+                  style: GoogleFonts.lato(fontSize: 16, color: subtleTextColor),
+                ),
+              );
+            }
+
             return Center(
-              child: Text(
-                "You haven't written any notes yet.",
-                style: GoogleFonts.lato(fontSize: 16, color: subtleTextColor),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    DocumentSnapshot document = snapshot.data!.docs[index];
+                    String docID = document.id;
+                    Map<String, dynamic> data =
+                        document.data() as Map<String, dynamic>;
+
+                    return _buildNoteCard(
+                      title: data['title'] ?? 'No Title',
+                      content: data['content'] ?? 'No Content',
+                      isPublic: data['isPublic'] ?? false,
+                      onEdit: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreateNoteScreen(
+                              docID: docID,
+                              initialTitle: data['title'],
+                              initialContent: data['content'],
+                              initialCategory: data['category'],
+                              initialIsPublic: data['isPublic'],
+                            ),
+                          ),
+                        );
+                      },
+                      onDelete: () {
+                        firestoreService.deleteNote(docID);
+                      },
+                    );
+                  },
+                ),
               ),
             );
-          }
-
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 700),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: snapshot.data!.docs.length,
-                itemBuilder: (context, index) {
-                  DocumentSnapshot document = snapshot.data!.docs[index];
-                  String docID = document.id;
-                  Map<String, dynamic> data =
-                      document.data() as Map<String, dynamic>;
-
-                  return _buildNoteCard(
-                    title: data['title'] ?? 'No Title',
-                    content: data['content'] ?? 'No Content',
-                    isPublic: data['isPublic'] ?? false,
-                    onEdit: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CreateNoteScreen(
-                            docID: docID,
-                            initialTitle: data['title'],
-                            initialContent: data['content'],
-                            initialCategory: data['category'],
-                            initialIsPublic: data['isPublic'],
-                          ),
-                        ),
-                      );
-                    },
-                    onDelete: () {
-                      firestoreService.deleteNote(docID);
-                    },
-                  );
-                },
-              ),
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

@@ -1,13 +1,11 @@
-// lib/widgets/home/home_app_bar.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
-import 'package:noteshare/screens/creator_earnings_screen.dart'; // Import the new screen
+import 'package:noteshare/screens/creator_earnings_screen.dart';
 import 'package:noteshare/screens/home_screen.dart';
-import 'package:noteshare/screens/login_screen.dart';
+import 'package:noteshare/screens/landing_screen.dart';
 import 'package:noteshare/screens/my_bookmarks_screen.dart';
 import 'package:noteshare/screens/my_coins_screen.dart';
 import 'package:noteshare/screens/my_notes_screen.dart';
@@ -15,6 +13,8 @@ import 'package:noteshare/screens/notifications_screen.dart';
 import 'package:noteshare/screens/profile.dart';
 import 'package:noteshare/screens/statistics_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/providers/search_provider.dart';
+import 'package:provider/provider.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchController;
@@ -74,7 +74,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       await FirebaseAuth.instance.signOut();
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen(onTap: null)),
+        MaterialPageRoute(builder: (context) => const LandingScreen()),
         (route) => false,
       );
     }
@@ -83,6 +83,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final FirestoreService firestoreService = FirestoreService();
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
@@ -127,6 +128,9 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   height: 40,
                   child: TextField(
                     controller: searchController,
+                    onChanged: (value) {
+                      searchProvider.updateSearchQuery(value);
+                    },
                     style: GoogleFonts.lato(fontSize: 16),
                     decoration: InputDecoration(
                       hintText: 'Search notes or users...',
@@ -137,7 +141,10 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                           ? IconButton(
                               icon: const Icon(Icons.clear,
                                   size: 20, color: Colors.grey),
-                              onPressed: onClearSearch,
+                              onPressed: () {
+                                searchController.clear();
+                                searchProvider.clearSearch();
+                              },
                             )
                           : null,
                       filled: true,

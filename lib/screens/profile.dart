@@ -5,6 +5,9 @@ import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:noteshare/screens/edit_profile.dart';
 import 'package:noteshare/widgets/home/note_card.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/providers/search_provider.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -130,133 +133,137 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: HomeAppBar(
         searchController: searchController,
-        searchKeyword: searchKeyword,
-        onClearSearch: () {
-          searchController.clear();
-        },
         currentUser: currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: const Color(0xFF6B7280),
-        sidebarBgColor: const Color(0xFFF9FAFB),
+        sidebarBgColor: const Color(0xFFF9FAFB), searchKeyword: '', onClearSearch: () {  },
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // LEFT: My Notes
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              userData?['fullName'] ?? '',
-                              style: const TextStyle(
-                                  fontSize: 40, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 24),
-                            Expanded(
-                              child: _buildNotesList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // RIGHT: Sidebar Card
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              margin: const EdgeInsets.only(left: 32),
-                              padding: const EdgeInsets.all(32),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(24),
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
+          }
+          return child!;
+        },
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // LEFT: My Notes
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userData?['fullName'] ?? '',
+                                style: const TextStyle(
+                                    fontSize: 40, fontWeight: FontWeight.bold),
                               ),
-                              child: Column(
-                                children: [
-                                  const CircleAvatar(
-                                    radius: 40,
-                                    backgroundColor: Colors.grey,
-                                    child: Icon(Icons.person,
-                                        size: 60, color: Colors.white),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                const EditProfilePage()),
-                                      ).then((_) => _fetchUserData());
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryBlue,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(20)),
+                              const SizedBox(height: 24),
+                              Expanded(
+                                child: _buildNotesList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // RIGHT: Sidebar Card
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.only(left: 32),
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: Column(
+                                  children: [
+                                    const CircleAvatar(
+                                      radius: 40,
+                                      backgroundColor: Colors.grey,
+                                      child: Icon(Icons.person,
+                                          size: 60, color: Colors.white),
                                     ),
-                                    child: const Text("Edit Profile"),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    userData?['fullName'] ?? '',
-                                    style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  // Followers & Following sejajar, angka besar, label kecil
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _buildStatColumn(currentUser!.uid, true),
-                                      const SizedBox(width: 40),
-                                      _buildStatColumn(currentUser!.uid, false),
-                                    ],
-                                  ),
-                                ],
+                                    const SizedBox(height: 12),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const EditProfilePage()),
+                                        ).then((_) => _fetchUserData());
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryBlue,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20)),
+                                      ),
+                                      child: const Text("Edit Profile"),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      userData?['fullName'] ?? '',
+                                      style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    // Followers & Following sejajar, angka besar, label kecil
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        _buildStatColumn(currentUser!.uid, true),
+                                        const SizedBox(width: 40),
+                                        _buildStatColumn(currentUser!.uid, false),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 32),
-                            const Padding(
-                              padding: EdgeInsets.only(left: 32, bottom: 8),
-                              child: Text("About Me",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18)),
-                            ),
-                            Container(
-                              margin: const EdgeInsets.only(left: 32),
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(12),
+                              const SizedBox(height: 32),
+                              const Padding(
+                                padding: EdgeInsets.only(left: 32, bottom: 8),
+                                child: Text("About Me",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18)),
                               ),
-                              child: Text(
-                                userData?['about'] ?? "",
-                                style: const TextStyle(fontSize: 15),
+                              Container(
+                                margin: const EdgeInsets.only(left: 32),
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  userData?['about'] ?? "",
+                                  style: const TextStyle(fontSize: 15),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }

@@ -3,8 +3,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart'; // Import HomeAppBar
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
 
 class StatisticsScreen extends StatefulWidget {
@@ -67,41 +70,47 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       appBar: HomeAppBar(
         // Pass dummy values for search-related parameters as they are not used on this screen
         searchController: _dummySearchController,
-        searchKeyword: '',
-        onClearSearch: () {},
         currentUser: _currentUser, // Pass current user
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: bgColor,
+        sidebarBgColor: bgColor, searchKeyword: '', onClearSearch: () {  },
         // Kita tidak bisa menggunakan 'title' di sini karena HomeAppBar yang Anda miliki tidak punya parameter itu
         // Kita juga tidak bisa menggunakan 'bottomWidget' di sini.
       ),
-      body: Column( // Menggunakan Column untuk menampung TabBar dan TabBarView
-        children: [
-          // TabBar diletakkan di sini, tepat di bawah AppBar
-          Container(
-            color: Colors.white, // Sesuaikan warna latar belakang TabBar
-            child: TabBar(
-              controller: _tabController,
-              labelColor: primaryBlue, // Menggunakan warna dari tema
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: primaryBlue, // Menggunakan warna dari tema
-              tabs: const [
-                Tab(text: 'Notes Stats'),
-                Tab(text: 'Audience Stats'),
-              ],
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
+          }
+          return child!;
+        },
+        child: Column( // Menggunakan Column untuk menampung TabBar dan TabBarView
+          children: [
+            // TabBar diletakkan di sini, tepat di bawah AppBar
+            Container(
+              color: Colors.white, // Sesuaikan warna latar belakang TabBar
+              child: TabBar(
+                controller: _tabController,
+                labelColor: primaryBlue, // Menggunakan warna dari tema
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: primaryBlue, // Menggunakan warna dari tema
+                tabs: const [
+                  Tab(text: 'Notes Stats'),
+                  Tab(text: 'Audience Stats'),
+                ],
+              ),
             ),
-          ),
-          Expanded( // Expanded agar TabBarView mengisi sisa ruang
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildNotesStatsView(),
-                _buildAudienceStatsView(),
-              ],
+            Expanded( // Expanded agar TabBarView mengisi sisa ruang
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildNotesStatsView(),
+                  _buildAudienceStatsView(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

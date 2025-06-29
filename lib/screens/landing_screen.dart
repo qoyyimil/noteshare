@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:noteshare/auth/login_or_register.dart';
 
 class LandingScreen extends StatelessWidget {
-  const LandingScreen({super.key});
+  const LandingScreen({super.key,});
 
   void _navigateToAuth(BuildContext context, {required bool isInitialLogin}) {
     Navigator.push(

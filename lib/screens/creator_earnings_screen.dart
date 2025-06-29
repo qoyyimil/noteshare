@@ -5,8 +5,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
 import 'package:noteshare/widgets/success_dialog.dart';
+import 'package:provider/provider.dart';
 
 class CreatorEarningsScreen extends StatefulWidget {
   const CreatorEarningsScreen({super.key});
@@ -29,6 +32,7 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
 
   bool _isWithdrawing = false;
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -41,6 +45,7 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
     _tabController.dispose();
     _amountController.dispose();
     _accountNumberController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -101,12 +106,20 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildWithdrawTab(),
-          _buildHistoryTab(),
-        ],
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
+          }
+          return child!;
+        },
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildWithdrawTab(),
+            _buildHistoryTab(),
+          ],
+        ),
       ),
     );
   }

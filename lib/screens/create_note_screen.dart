@@ -6,6 +6,9 @@ import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:noteshare/providers/search_provider.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 
 class CreateNoteScreen extends StatefulWidget {
   final String? docID;
@@ -198,51 +201,88 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
       backgroundColor: bgColor,
       appBar: HomeAppBar(
         searchController: _searchController,
-        searchKeyword: _searchController.text,
-        onClearSearch: _onClearSearch,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: bgColor,
+        sidebarBgColor: bgColor, searchKeyword: '', onClearSearch: () {  },
+        // searchKeyword dan onClearSearch DIHAPUS
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isPublishing ? null : _publishNote,
         backgroundColor: _isPublishing ? Colors.grey : primaryBlue,
-        icon: _isPublishing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.send, color: Colors.white),
-        label: Text(isEditing ? 'Update' : 'Publish', style: GoogleFonts.lato(fontWeight: FontWeight.bold, color: Colors.white)),
+        icon: _isPublishing
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Icon(Icons.send, color: Colors.white),
+        label: Text(
+          isEditing ? 'Update' : 'Publish',
+          style: GoogleFonts.lato(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildConfigurationSection(),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: titleController,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'Your Note Title',
-                    hintStyle: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey.shade400),
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
+          }
+          return child!;
+        },
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildConfigurationSection(),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'Your Note Title',
+                      hintStyle: GoogleFonts.lora(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                    style: GoogleFonts.lora(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
                   ),
-                  style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: textColor),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: contentController,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'Start writing your note here...',
-                    hintStyle: GoogleFonts.sourceSerif4(fontSize: 18, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: contentController,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'Start writing your note here...',
+                      hintStyle: GoogleFonts.sourceSerif4(
+                        fontSize: 18,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                    style: GoogleFonts.sourceSerif4(
+                      fontSize: 18,
+                      height: 1.6,
+                      color: textColor,
+                    ),
+                    maxLines: null,
                   ),
-                  style: GoogleFonts.sourceSerif4(fontSize: 18, height: 1.6, color: textColor),
-                  maxLines: null,
-                ),
-                const SizedBox(height: 100),
-              ],
+                  const SizedBox(height: 100),
+                ],
+              ),
             ),
           ),
         ),

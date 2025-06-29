@@ -4,19 +4,22 @@ import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
 import 'package:noteshare/firebase_options.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/date_symbol_data_local.dart'; // <-- Import ini
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:noteshare/providers/search_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await initializeDateFormatting(
-    'id_ID', null
-  );
+  await initializeDateFormatting('id_ID', null);
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => AuthService(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => AuthService()),
+        ChangeNotifierProvider(
+            create: (context) => SearchProvider()),
+      ],
       child: const MyApp(),
     ),
   );

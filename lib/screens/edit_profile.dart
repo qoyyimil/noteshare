@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
+import 'package:noteshare/widgets/search_results_view.dart';
+import 'package:provider/provider.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -58,7 +61,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     aboutController.text = data['about'] ?? '';
 
     final educationLevelFromDB = data['educationLevel'];
-    if (educationLevelFromDB != null && _educationLevels.contains(educationLevelFromDB)) {
+    if (educationLevelFromDB != null &&
+        _educationLevels.contains(educationLevelFromDB)) {
       _selectedEducationLevel = educationLevelFromDB;
     }
 
@@ -152,231 +156,242 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       appBar: HomeAppBar(
         searchController: searchController,
-        searchKeyword: '',
-        onClearSearch: () {},
         currentUser: currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
         sidebarBgColor: sidebarBgColor,
+        searchKeyword: '',
+        onClearSearch: () {},
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Center(
-              child: SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1100),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 32),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // LEFT COLUMN: Profile Card & About Me
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Column(
-                                      children: [
-                                        const CircleAvatar(
-                                          radius: 40,
-                                          backgroundColor: Colors.grey,
-                                          child: Icon(Icons.person,
-                                              size: 60, color: Colors.white),
-                                        ),
-                                        const SizedBox(height: 12),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 32),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+      body: Consumer<SearchProvider>(
+        builder: (context, searchProvider, child) {
+          if (searchProvider.searchQuery.isNotEmpty) {
+            return const SearchResultsView();
+          }
+          return child!;
+        },
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : Center(
+                child: SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1100),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 32),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // LEFT COLUMN: Profile Card & About Me
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(32),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Column(
                                         children: [
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              Expanded(
-                                                child: _isEditingName
-                                                    ? TextFormField(
-                                                        controller:
-                                                            fullNameController,
-                                                        autofocus: true,
-                                                        style: const TextStyle(
-                                                            fontSize: 28,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold),
-                                                        decoration:
-                                                            const InputDecoration
-                                                                .collapsed(
-                                                                hintText:
-                                                                    'Your Name'),
-                                                      )
-                                                    : Text(
-                                                        fullNameController.text,
-                                                        style: const TextStyle(
-                                                            fontSize: 28,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold),
-                                                      ),
-                                              ),
-                                              IconButton(
-                                                icon: Icon(
-                                                    _isEditingName
-                                                        ? Icons.done
-                                                        : Icons.edit,
-                                                    color: primaryBlue),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    _isEditingName =
-                                                        !_isEditingName;
-                                                  });
-                                                },
-                                              ),
-                                            ],
+                                          const CircleAvatar(
+                                            radius: 40,
+                                            backgroundColor: Colors.grey,
+                                            child: Icon(Icons.person,
+                                                size: 60, color: Colors.white),
                                           ),
                                           const SizedBox(height: 12),
-                                          Row(
-                                            children: [
-                                              _buildStatColumn(
-                                                  currentUser!.uid, true),
-                                              const SizedBox(width: 24),
-                                              _buildStatColumn(
-                                                  currentUser!.uid, false),
-                                            ],
-                                          ),
                                         ],
+                                      ),
+                                      const SizedBox(width: 32),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                Expanded(
+                                                  child: _isEditingName
+                                                      ? TextFormField(
+                                                          controller:
+                                                              fullNameController,
+                                                          autofocus: true,
+                                                          style: const TextStyle(
+                                                              fontSize: 28,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold),
+                                                          decoration:
+                                                              const InputDecoration
+                                                                  .collapsed(
+                                                                  hintText:
+                                                                      'Your Name'),
+                                                        )
+                                                      : Text(
+                                                          fullNameController
+                                                              .text,
+                                                          style: const TextStyle(
+                                                              fontSize: 28,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold),
+                                                        ),
+                                                ),
+                                                IconButton(
+                                                  icon: Icon(
+                                                      _isEditingName
+                                                          ? Icons.done
+                                                          : Icons.edit,
+                                                      color: primaryBlue),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _isEditingName =
+                                                          !_isEditingName;
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Row(
+                                              children: [
+                                                _buildStatColumn(
+                                                    currentUser!.uid, true),
+                                                const SizedBox(width: 24),
+                                                _buildStatColumn(
+                                                    currentUser!.uid, false),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                const Text("About Me",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20)),
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: TextFormField(
+                                    controller: aboutController,
+                                    maxLines: 6,
+                                    style: const TextStyle(fontSize: 15),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      isCollapsed: true,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // VERTICAL DIVIDER
+                          Container(
+                            width: 1,
+                            margin: const EdgeInsets.symmetric(horizontal: 32),
+                            color: Colors.grey.shade300,
+                          ),
+                          // RIGHT COLUMN: Editable Fields
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _profileField("Email", emailController,
+                                    enabled: true),
+                                const SizedBox(height: 24),
+                                _profileField("Phone Number", phoneController),
+                                const SizedBox(height: 24),
+                                GestureDetector(
+                                  onTap: _pickBirthDate,
+                                  child: AbsorbPointer(
+                                    child: _profileField(
+                                      "Birth Date",
+                                      birthDateController,
+                                      hint: "Select birth date",
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                _buildEducationDropdown(),
+                                const SizedBox(height: 40),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed:
+                                            _saving ? null : _saveProfile,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 16),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(24)),
+                                        ),
+                                        child: _saving
+                                            ? const SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        color: Colors.white,
+                                                        strokeWidth: 2),
+                                              )
+                                            : const Text("Save",
+                                                style: TextStyle(fontSize: 16)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 24),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: _saving
+                                            ? null
+                                            : () {
+                                                Navigator.pop(context);
+                                              },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.grey.shade200,
+                                          foregroundColor: Colors.red,
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 16),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(24)),
+                                        ),
+                                        child: const Text("Cancel",
+                                            style: TextStyle(fontSize: 16)),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(height: 32),
-                              const Text("About Me",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20)),
-                              const SizedBox(height: 12),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: TextFormField(
-                                  controller: aboutController,
-                                  maxLines: 6,
-                                  style: const TextStyle(fontSize: 15),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    isCollapsed: true,
-                                  ),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        // VERTICAL DIVIDER
-                        Container(
-                          width: 1,
-                          margin: const EdgeInsets.symmetric(horizontal: 32),
-                          color: Colors.grey.shade300,
-                        ),
-                        // RIGHT COLUMN: Editable Fields
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _profileField("Email", emailController,
-                                  enabled: true),
-                              const SizedBox(height: 24),
-                              _profileField("Phone Number", phoneController),
-                              const SizedBox(height: 24),
-                              GestureDetector(
-                                onTap: _pickBirthDate,
-                                child: AbsorbPointer(
-                                  child: _profileField(
-                                    "Birth Date",
-                                    birthDateController,
-                                    hint: "Select birth date",
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              _buildEducationDropdown(),
-                              const SizedBox(height: 40),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: _saving ? null : _saveProfile,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(24)),
-                                      ),
-                                      child: _saving
-                                          ? const SizedBox(
-                                              width: 24,
-                                              height: 24,
-                                              child: CircularProgressIndicator(
-                                                  color: Colors.white,
-                                                  strokeWidth: 2),
-                                            )
-                                          : const Text("Save",
-                                              style: TextStyle(fontSize: 16)),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 24),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: _saving
-                                          ? null
-                                          : () {
-                                              Navigator.pop(context);
-                                            },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.grey.shade200,
-                                        foregroundColor: Colors.red,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(24)),
-                                      ),
-                                      child: const Text("Cancel",
-                                          style: TextStyle(fontSize: 16)),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
