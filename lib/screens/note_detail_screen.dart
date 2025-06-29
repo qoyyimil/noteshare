@@ -27,6 +27,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
   final TextEditingController _searchController = TextEditingController();
+  final GlobalKey _commentSectionKey = GlobalKey();
 
   // --- State for Purchase Flow ---
   bool _isPurchasing = false;
@@ -205,11 +206,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                           stream: commentStream,
                           builder: (context, commentSnapshot) {
                             final comments = commentSnapshot.data?.docs ?? [];
-                            return CommentSection(
-                              noteId: widget.noteId,
-                              firestoreService: _firestoreService,
-                              currentUser: _currentUser,
-                              comments: comments,
+                            return KeyedSubtree(
+                              key: _commentSectionKey,
+                              child: CommentSection(
+                                noteId: widget.noteId,
+                                firestoreService: _firestoreService,
+                                currentUser: _currentUser,
+                                comments: comments,
+                              ),
                             );
                           }),
                     ],
@@ -466,8 +470,15 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             stream: _firestoreService.getCommentsStream(widget.noteId),
             builder: (context, snapshot) {
               final int commentCount = snapshot.data?.docs.length ?? 0;
-              return _actionButton(Icons.chat_bubble_outline, '$commentCount',
-                  subtleTextColor, () {});
+              return _actionButton(
+                  Icons.chat_bubble_outline, '$commentCount', subtleTextColor,
+                  () {
+                Scrollable.ensureVisible(
+                  _commentSectionKey.currentContext!,
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                );
+              });
             }),
         const Spacer(),
         StreamBuilder<bool>(

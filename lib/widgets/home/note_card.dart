@@ -197,12 +197,6 @@ class NoteCard extends StatelessWidget {
                         onPressed: () => firestoreService.toggleBookmark(docId),
                       ),
                       const SizedBox(width: 16),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        icon: Icon(Icons.more_horiz, color: subtleTextColor),
-                        onPressed: () { /* TODO: Implement more options */ },
-                      ),
                     ],
                   ),
                 ],
