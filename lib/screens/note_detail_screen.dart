@@ -12,6 +12,7 @@ import 'package:noteshare/widgets/share_dialog.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:noteshare/screens/edit_profile.dart';
 import 'package:noteshare/screens/top_up_screen.dart';
+import 'package:noteshare/screens/public_profile.dart'; // Tambahkan baris ini
 
 class NoteDetailScreen extends StatefulWidget {
   final String noteId;
@@ -339,64 +340,93 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
-  Widget _buildAuthorHeader(Map<String, dynamic> data, bool isMyNote) {
-    final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-    final formattedTime = timestamp != null
-        ? DateFormat.yMMMMd('en_US').add_jm().format(timestamp)
-        : 'A few seconds ago';
+Widget _buildAuthorHeader(Map<String, dynamic> data, bool isMyNote) {
+   final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+   final formattedTime = timestamp != null
+       ? DateFormat.yMMMMd('en_US').add_jm().format(timestamp)
+       : 'A few seconds ago';
 
-    final int readCount = data['readCount'] ?? 0;
-    final String userFullName = data['fullName'] ?? 'Anonymous User';
-    final String firstLetter =
-        userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
+   final int readCount = data['readCount'] ?? 0;
+   final String userFullName = data['fullName'] ?? 'Anonymous User';
+   final String firstLetter =
+       userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
+   final String ownerId = data['ownerId'] ?? ''; // Dapatkan ownerId di sini
 
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: primaryBlue,
-          child: Text(
-            firstLetter,
-            style: const TextStyle(color: Colors.white, fontSize: 18),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(userFullName,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.lato(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              Row(
-                children: [
-                  Text(formattedTime,
-                      style:
-                          GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
-                  Text(' • $readCount views',
-                      style:
-                          GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        if (!isMyNote)
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Follow'),
-          ),
-      ],
-    );
-  }
+   return GestureDetector( // Bungkus dengan GestureDetector
+     onTap: () {
+       if (_currentUser?.uid != ownerId) { // Hanya navigasi jika bukan profil pengguna saat ini
+         Navigator.push(
+           context,
+           MaterialPageRoute(
+             builder: (context) => PublicProfileScreen(userId: ownerId), // Navigasi ke PublicProfileScreen
+           ),
+         );
+       }
+     },
+     child: Row(
+       children: [
+         CircleAvatar(
+           radius: 24,
+           backgroundColor: primaryBlue,
+           child: Text(
+             firstLetter,
+             style: const TextStyle(color: Colors.white, fontSize: 18),
+           ),
+         ),
+         const SizedBox(width: 12),
+         Expanded(
+           child: Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+               Text(userFullName,
+                   overflow: TextOverflow.ellipsis,
+                   style: GoogleFonts.lato(
+                       fontWeight: FontWeight.bold, fontSize: 16)),
+               Row(
+                 children: [
+                   Text(formattedTime,
+                       style:
+                           GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+                   Text(' • $readCount views',
+                       style:
+                           GoogleFonts.lato(color: subtleTextColor, fontSize: 14)),
+                 ],
+               ),
+             ],
+           ),
+         ),
+         const SizedBox(width: 12),
+         if (!isMyNote)
+           StreamBuilder<bool>( // Pastikan StreamBuilder membungkus ElevatedButton
+             stream: _firestoreService.isFollowingUser(ownerId),
+             builder: (context, snapshot) {
+               final isFollowing = snapshot.data ?? false;
+               return ElevatedButton(
+                 onPressed: () async {
+                   if (_currentUser != null) {
+                     await _firestoreService.toggleFollowUser(ownerId);
+                   }
+                 },
+                 style: ElevatedButton.styleFrom(
+                   // --- PERUBAHAN DI SINI ---
+                   backgroundColor: isFollowing ? Colors.white : primaryBlue, // Jika Following -> Putih, jika belum -> primaryBlue
+                   foregroundColor: isFollowing ? primaryBlue : Colors.white, // Jika Following -> primaryBlue, jika belum -> Putih
+                   side: isFollowing // Jika Following -> border biru, jika belum -> tidak ada border
+                       ? const BorderSide(color: primaryBlue)
+                       : BorderSide.none,
+                   // --- AKHIR PERUBAHAN ---
+                   shape: RoundedRectangleBorder(
+                       borderRadius: BorderRadius.circular(20)),
+                 ),
+                 child: Text(isFollowing ? 'Following' : 'Follow'),
+               );
+             },
+           ),
+       ],
+     ),
+   );
+ }
+ 
 
   Widget _buildNoteActions(Map<String, dynamic> data, bool isMyNote) {
     final List<dynamic> likes = data.containsKey('likes') ? data['likes'] : [];
@@ -530,96 +560,108 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
-  Widget _buildAuthorFooter(Map<String, dynamic> data, bool isMyNote) {
-    final String userFullName = data['fullName'] ?? 'Anonymous User';
-    final String firstLetter =
-        userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
-    final String ownerId = data['ownerId'] ?? '';
+Widget _buildAuthorFooter(Map<String, dynamic> data, bool isMyNote) {
+   final String userFullName = data['fullName'] ?? 'Anonymous User';
+   final String firstLetter =
+       userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
+   final String ownerId = data['ownerId'] ?? '';
 
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: primaryBlue,
-          child: Text(
-            firstLetter,
-            style: const TextStyle(color: Colors.white, fontSize: 20),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Written by $userFullName',
-                style: GoogleFonts.lato(
-                    fontWeight: FontWeight.bold, fontSize: 16)),
-            Row(
-              children: [
-                StreamBuilder<int>(
-                  stream: _firestoreService.getFollowersCount(ownerId),
-                  builder: (context, snapshot) {
-                    final followers = snapshot.data ?? 0;
-                    return Text('$followers Followers',
-                        style: GoogleFonts.lato(
-                            color: subtleTextColor, fontSize: 14));
-                  },
-                ),
-                const SizedBox(width: 8),
-                StreamBuilder<int>(
-                  stream: _firestoreService.getFollowingCount(ownerId),
-                  builder: (context, snapshot) {
-                    final following = snapshot.data ?? 0;
-                    return Text('• $following Following',
-                        style: GoogleFonts.lato(
-                            color: subtleTextColor, fontSize: 14));
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-        const Spacer(),
-        if (isMyNote)
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const EditProfilePage()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: primaryBlue,
-              side: const BorderSide(color: primaryBlue),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Edit Profile'),
-          )
-        else
-          StreamBuilder<bool>(
-            stream: _firestoreService.isFollowingUser(ownerId),
-            builder: (context, snapshot) {
-              final isFollowing = snapshot.data ?? false;
-              return ElevatedButton(
-                onPressed: () async {
-                  await _firestoreService.toggleFollowUser(ownerId);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isFollowing ? Colors.white : primaryBlue,
-                  foregroundColor: isFollowing ? primaryBlue : Colors.white,
-                  side: isFollowing
-                      ? const BorderSide(color: primaryBlue)
-                      : BorderSide.none,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                ),
-                child: Text(isFollowing ? 'Following' : 'Follow'),
-              );
-            },
-          ),
-      ],
-    );
-  }
+   return GestureDetector( // Bungkus dengan GestureDetector
+     onTap: () {
+       if (_currentUser?.uid != ownerId) { // Hanya navigasi jika bukan profil pengguna saat ini
+         Navigator.push(
+           context,
+           MaterialPageRoute(
+             builder: (context) => PublicProfileScreen(userId: ownerId), // Navigasi ke PublicProfileScreen
+           ),
+         );
+       }
+     },
+     child: Row(
+       children: [
+         CircleAvatar(
+           radius: 28,
+           backgroundColor: primaryBlue,
+           child: Text(
+             firstLetter,
+             style: const TextStyle(color: Colors.white, fontSize: 20),
+           ),
+         ),
+         const SizedBox(width: 16),
+         Column(
+           crossAxisAlignment: CrossAxisAlignment.start,
+           children: [
+             Text('Written by $userFullName',
+                 style: GoogleFonts.lato(
+                     fontWeight: FontWeight.bold, fontSize: 16)),
+             Row(
+               children: [
+                 StreamBuilder<int>(
+                   stream: _firestoreService.getFollowersCount(ownerId),
+                   builder: (context, snapshot) {
+                     final followers = snapshot.data ?? 0;
+                     return Text('$followers Followers',
+                         style: GoogleFonts.lato(
+                             color: subtleTextColor, fontSize: 14));
+                   },
+                 ),
+                 const SizedBox(width: 8),
+                 StreamBuilder<int>(
+                   stream: _firestoreService.getFollowingCount(ownerId),
+                   builder: (context, snapshot) {
+                     final following = snapshot.data ?? 0;
+                     return Text('• $following Following',
+                         style: GoogleFonts.lato(
+                             color: subtleTextColor, fontSize: 14));
+                   },
+                 ),
+               ],
+             ),
+           ],
+         ),
+         const Spacer(),
+         if (isMyNote)
+           ElevatedButton(
+             onPressed: () {
+               Navigator.push(
+                 context,
+                 MaterialPageRoute(
+                     builder: (context) => const EditProfilePage()),
+               );
+             },
+             style: ElevatedButton.styleFrom(
+               backgroundColor: Colors.white,
+               foregroundColor: primaryBlue,
+               side: const BorderSide(color: primaryBlue),
+               shape: RoundedRectangleBorder(
+                   borderRadius: BorderRadius.circular(20)),
+             ),
+             child: const Text('Edit Profile'),
+           )
+         else
+           StreamBuilder<bool>(
+             stream: _firestoreService.isFollowingUser(ownerId),
+             builder: (context, snapshot) {
+               final isFollowing = snapshot.data ?? false;
+               return ElevatedButton(
+                 onPressed: () async {
+                   await _firestoreService.toggleFollowUser(ownerId);
+                 },
+                 style: ElevatedButton.styleFrom(
+                   backgroundColor: isFollowing ? Colors.white : primaryBlue,
+                   foregroundColor: isFollowing ? primaryBlue : Colors.white,
+                   side: isFollowing
+                       ? const BorderSide(color: primaryBlue)
+                       : BorderSide.none,
+                   shape: RoundedRectangleBorder(
+                       borderRadius: BorderRadius.circular(20)),
+                 ),
+                 child: Text(isFollowing ? 'Following' : 'Follow'),
+               );
+             },
+           ),
+       ],
+     ),
+   );
+}
 }
