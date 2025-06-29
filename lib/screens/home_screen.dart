@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final FirestoreService firestoreService = FirestoreService();
   final User? currentUser = FirebaseAuth.instance.currentUser;
 
-  // --- State untuk Search & Filter ---
+  // --- State for Search & Filter ---
   final TextEditingController _searchController = TextEditingController();
   String _searchKeyword = '';
   String _activeSearchTab = 'Note';
@@ -47,13 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const Color subtleTextColor = Color(0xFF6B7280);
 
   final List<String> _categories = [
-    'For You',
-    'General',
-    'Physics',
-    'Mathematics',
-    'History',
-    'Biology',
-    'Chemistry'
+    'For You', 'General', 'Physics', 'Mathematics', 'History', 'Biology', 'Chemistry'
   ];
 
   @override
@@ -80,20 +74,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _clearSearch() {
     _searchController.clear();
-    setState(() {
-      _searchKeyword = '';
-      _activeSearchTab = 'Note';
-    });
   }
 
-  // Callback untuk CategoryTabs
   void _onCategorySelected(String category) {
     setState(() {
       _selectedCategory = category;
     });
   }
 
-  // Callback untuk SearchTabs
   void _onSearchTabSelected(String tabName) {
     setState(() {
       _activeSearchTab = tabName;
@@ -105,7 +93,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: HomeAppBar(
-        // Menggunakan widget HomeAppBar
         searchController: _searchController,
         searchKeyword: _searchKeyword,
         onClearSearch: _clearSearch,
@@ -126,7 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _searchKeyword.isEmpty
                         ? CategoryTabs(
-                            // Menggunakan widget CategoryTabs
                             categories: _categories,
                             selectedCategory: _selectedCategory,
                             onCategorySelected: _onCategorySelected,
@@ -134,7 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             subtleTextColor: subtleTextColor,
                           )
                         : SearchTabs(
-                            // Menggunakan widget SearchTabs
                             activeSearchTab: _activeSearchTab,
                             onSearchTabSelected: _onSearchTabSelected,
                             primaryBlue: primaryBlue,
@@ -152,16 +137,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               if (MediaQuery.of(context).size.width > 800)
-                Container(
+                SizedBox(
                   width: 350,
-                  padding: const EdgeInsets.only(left: 24.0, top: 16.0),
-                  child: TopPicksSidebar(
-                    // Menggunakan widget TopPicksSidebar
-                    firestoreService: firestoreService,
-                    primaryBlue: primaryBlue,
-                    textColor: textColor,
-                    subtleTextColor: subtleTextColor,
-                    sidebarBgColor: sidebarBgColor,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 24.0, top: 16.0),
+                    child: TopPicksSidebar(
+                      firestoreService: firestoreService,
+                      primaryBlue: primaryBlue,
+                      textColor: textColor,
+                      subtleTextColor: subtleTextColor,
+                      sidebarBgColor: sidebarBgColor,
+                    ),
                   ),
                 ),
             ],
@@ -171,31 +157,39 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Metode-metode yang mem-build daftar (list) akan tetap di HomeScreen ---
-  // Karena mereka memiliki logika filtering berdasarkan state HomeScreen
+  // --- CORRECTED PATTERN FOR STREAMBUILDER ---
   Widget _buildNotesList() {
     return StreamBuilder<QuerySnapshot>(
       stream: firestoreService.getPublicNotesStream(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        // 1. Handle connection state first
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+        // 2. Handle errors
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+        // 3. Handle case where there's no data, but no error
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("There are no notes in this category."));
+        }
 
+        // 4. If everything is fine, build the list
         final notes = snapshot.data!.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           return _selectedCategory == 'For You' ||
-              (data['category'] ?? '').toString().toLowerCase() ==
-                  _selectedCategory.toLowerCase();
+              (data['category'] ?? '').toString().toLowerCase() == _selectedCategory.toLowerCase();
         }).toList();
 
-        if (notes.isEmpty)
-          return const Center(
-              child: Text("There are no notes in this category."));
+        if (notes.isEmpty) {
+          return const Center(child: Text("There are no notes in this category."));
+        }
 
         return ListView.builder(
           padding: const EdgeInsets.all(16.0),
           itemCount: notes.length,
           itemBuilder: (context, index) => NoteCard(
-            // Menggunakan widget NoteCard
             docId: notes[index].id,
             data: notes[index].data() as Map<String, dynamic>,
             firestoreService: firestoreService,
@@ -212,8 +206,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<QuerySnapshot>(
         stream: firestoreService.getPublicNotesStream(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No notes found."));
+          }
 
           final filteredNotes = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
@@ -225,14 +226,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 userEmail.contains(_searchKeyword);
           }).toList();
 
-          if (filteredNotes.isEmpty)
+          if (filteredNotes.isEmpty) {
             return const Center(child: Text("No matching notes found."));
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
             itemCount: filteredNotes.length,
             itemBuilder: (context, index) => NoteCard(
-              // Menggunakan widget NoteCard
               docId: filteredNotes[index].id,
               data: filteredNotes[index].data() as Map<String, dynamic>,
               firestoreService: firestoreService,
@@ -248,8 +249,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<QuerySnapshot>(
         stream: firestoreService.users.snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+           if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No users found."));
+          }
 
           final filteredUsers = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
@@ -259,18 +267,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 userName.contains(_searchKeyword);
           }).toList();
 
-          if (filteredUsers.isEmpty)
+          if (filteredUsers.isEmpty) {
             return const Center(child: Text("Users not found."));
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
-            itemCount: filteredUsers.length,
             itemBuilder: (context, index) {
-              final userData =
-                  filteredUsers[index].data() as Map<String, dynamic>;
-              final userId = filteredUsers[index].id; // Dapatkan UID pengguna
-              final userName = userData['fullName'] ??
-                  userData['No Name']; // Ambil nama atau email
+              final userData = filteredUsers[index].data() as Map<String, dynamic>;
+              final userId = filteredUsers[index].id;
+              final userName = userData['fullName'] ?? userData['No Name'];
 
               return PeopleCard(
                 data: userData,
@@ -290,6 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               );
             },
+            itemCount: filteredUsers.length,
           );
         });
   }

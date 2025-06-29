@@ -1,11 +1,15 @@
+// lib/widgets/home/home_app_bar.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
+import 'package:noteshare/screens/creator_earnings_screen.dart'; // Import the new screen
 import 'package:noteshare/screens/home_screen.dart';
 import 'package:noteshare/screens/login_screen.dart';
 import 'package:noteshare/screens/my_bookmarks_screen.dart';
+import 'package:noteshare/screens/my_coins_screen.dart';
 import 'package:noteshare/screens/my_notes_screen.dart';
 import 'package:noteshare/screens/notifications_screen.dart';
 import 'package:noteshare/screens/profile.dart';
@@ -56,6 +60,16 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               builder: (context) => StatisticsScreen(userId: currentUser!.uid)),
         );
       }
+    } else if (value == 'coins') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MyCoinsScreen()),
+      );
+    } else if (value == 'earnings') { // Add case for earnings
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CreatorEarningsScreen()),
+      );
     } else if (value == 'logout') {
       await FirebaseAuth.instance.signOut();
       Navigator.pushAndRemoveUntil(
@@ -156,7 +170,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // --- Tombol Notifikasi yang Diperbarui ---
               StreamBuilder<int>(
                 stream: firestoreService.getUnreadNotificationsCountStream(),
                 builder: (context, snapshot) {
@@ -178,82 +191,59 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 },
               ),
               const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                onSelected: (value) => _onMenuItemSelected(value, context),
-                offset: const Offset(0, 40),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                itemBuilder: (context) => [
-                  const PopupMenuItem<String>(
-                    value: 'profile',
-                    child: ListTile(
-                      leading: Icon(Icons.person_outline),
-                      title: Text('Profile'),
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'library',
-                    child: ListTile(
-                      leading: Icon(Icons.bookmark_border),
-                      title: Text('Library'),
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'notes',
-                    child: ListTile(
-                      leading: Icon(Icons.note_alt_outlined),
-                      title: Text('My Notes'),
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'stats',
-                    child: ListTile(
-                      leading: Icon(Icons.bar_chart_outlined),
-                      title: Text('Statistics'),
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem<String>(
-                    value: 'logout',
-                    child: ListTile(
-                      leading: Icon(Icons.logout, color: Colors.red),
-                      title: Text('Log Out'),
-                    ),
-                  ),
-                ],
-                child: FutureBuilder<DocumentSnapshot>(
-                  future: currentUser != null
-                      ? FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(currentUser!.uid)
-                          .get()
-                      : null,
+
+              // --- MODIFIED: Use FutureBuilder to check for premium status ---
+              if (currentUser != null)
+                FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).get(),
                   builder: (context, snapshot) {
-                    String displayLetter = 'U';
-                    if (snapshot.hasData && snapshot.data!.exists) {
-                      final userData =
-                          snapshot.data!.data() as Map<String, dynamic>?;
-                      final fullName = (userData?['fullName'] ?? '').toString();
-                      if (fullName.isNotEmpty) {
-                        displayLetter = fullName[0].toUpperCase();
-                      }
-                    } else if (currentUser?.displayName != null &&
-                        currentUser!.displayName!.isNotEmpty) {
-                      displayLetter =
-                          currentUser!.displayName![0].toUpperCase();
+                    if (!snapshot.hasData) {
+                      // Show a placeholder while loading user data
+                      return const CircleAvatar(radius: 18, child: SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)));
                     }
-                    return CircleAvatar(
-                      radius: 18,
-                      backgroundColor: primaryBlue,
-                      child: Text(
-                        displayLetter,
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
+
+                    final userData = snapshot.data!.data() as Map<String, dynamic>?;
+                    final bool canPostPremium = userData?['canPostPremium'] ?? false;
+                    final String displayLetter = (userData?['fullName']?.isNotEmpty == true) ? userData!['fullName']![0].toUpperCase() : 'U';
+
+                    return PopupMenuButton<String>(
+                      onSelected: (value) => _onMenuItemSelected(value, context),
+                      offset: const Offset(0, 40),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem<String>(value: 'profile', child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profile'))),
+                        const PopupMenuItem<String>(value: 'library', child: ListTile(leading: Icon(Icons.bookmark_border), title: Text('Library'))),
+                        const PopupMenuItem<String>(value: 'notes', child: ListTile(leading: Icon(Icons.note_alt_outlined), title: Text('My Notes'))),
+                        const PopupMenuItem<String>(value: 'stats', child: ListTile(leading: Icon(Icons.bar_chart_outlined), title: Text('Statistics'))),
+                        const PopupMenuItem<String>(value: 'coins', child: ListTile(leading: Icon(Icons.monetization_on_outlined), title: Text('My Coins'))),
+                        
+                        // --- NEW: Conditionally display the Earnings menu item ---
+                        if (canPostPremium)
+                          const PopupMenuItem<String>(
+                            value: 'earnings',
+                            child: ListTile(
+                              leading: Icon(Icons.paid_outlined, color: Colors.green),
+                              title: Text('Creator Earnings'),
+                            ),
+                          ),
+
+                        const PopupMenuDivider(),
+                        const PopupMenuItem<String>(
+                          value: 'logout',
+                          child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Log Out')),
+                        ),
+                      ],
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: primaryBlue,
+                        child: Text(
+                          displayLetter,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     );
                   },
                 ),
-              ),
               const SizedBox(width: 16),
             ],
           ),
