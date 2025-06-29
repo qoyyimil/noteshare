@@ -118,7 +118,7 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   }
 
   // --- UI WIDGET TELAH DIPERBAIKI DI SINI ---
-  Widget _buildWithdrawTab() {
+    Widget _buildWithdrawTab() {
     if (_currentUser == null) return const Center(child: Text("Please log in."));
 
     return SingleChildScrollView(
@@ -172,8 +172,7 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
             Text("Withdrawal Details",
                 style: GoogleFonts.lato(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-
-            // --- PERBAIKAN UI DROPDOWN DI SINI ---
+            
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -197,10 +196,12 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
                 onChanged: (value) => setState(() => _selectedMethod = value),
                 validator: (value) =>
                     value == null ? 'Please select a method' : null,
+                // --- PERBAIKAN DI SINI ---
+                dropdownColor: Colors.white, // Menetapkan warna background menu saat dibuka
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none, // Sembunyikan border asli
+                    borderSide: BorderSide.none,
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade50,
