@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/services/firestore_service.dart';
@@ -7,9 +8,102 @@ import 'package:noteshare/widgets/home/people_card.dart';
 import 'package:noteshare/widgets/home/search_tabs.dart';
 import 'package:provider/provider.dart';
 import 'package:noteshare/widgets/home/public_profile_screen.dart';
+import 'package:noteshare/screens/note_detail_screen.dart';
+import 'package:noteshare/screens/top_up_screen.dart';
 
 class SearchResultsView extends StatelessWidget {
   const SearchResultsView({super.key});
+
+  void _showPurchaseConfirmationDialog(
+      BuildContext context, Map<String, dynamic> data, String docId) {
+    final int price = data['coinPrice'] ?? 0;
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    final firestoreService = FirestoreService();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text("Unlock Premium Note"),
+        content: Text("Do you want to spend $price coins to unlock this note?"),
+        actions: [
+          TextButton(
+            child: const Text("Cancel"),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+          ),
+          ElevatedButton(
+            child: const Text("Unlock"),
+            onPressed: () async {
+              if (currentUser == null) return;
+
+              Navigator.of(dialogContext).pop();
+
+              final result =
+                  await firestoreService.purchaseNote(currentUser.uid, docId);
+
+              if (result == "Purchase successful!") {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => NoteDetailScreen(noteId: docId)),
+                );
+              } else if (result == "Not enough coins!") {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text("Insufficient Coins"),
+                    content: const Text(
+                        "You don't have enough coins. Would you like to top up?"),
+                    actions: [
+                      TextButton(
+                        child: const Text("Cancel"),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                      ElevatedButton(
+                        child: const Text("Top Up Now"),
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const TopUpScreen()));
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(result), backgroundColor: Colors.red));
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleNoteTap(
+      BuildContext context, Map<String, dynamic> data, String docId) {
+    final bool isPremium = data['isPremium'] ?? false;
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    final String currentUserId = currentUser?.uid ?? '';
+    final List purchasedBy = data['purchasedBy'] ?? [];
+    final bool hasPurchased = purchasedBy.contains(currentUserId);
+    final bool isOwner = data['ownerId'] == currentUserId;
+
+    Provider.of<SearchProvider>(context, listen: false).clearSearch();
+
+    if (!isPremium || isOwner || hasPurchased) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => NoteDetailScreen(noteId: docId)),
+      );
+    } else {
+      _showPurchaseConfirmationDialog(context, data, docId);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +155,6 @@ class SearchResultsView extends StatelessWidget {
             final data = doc.data() as Map<String, dynamic>;
             final title = (data['title'] ?? '').toLowerCase();
             final content = (data['content'] ?? '').toLowerCase();
-            // **PERUBAIKAN: Ganti userEmail dengan fullName**
             final authorName = (data['fullName'] ?? '').toLowerCase();
 
             return title.contains(keyword) ||
@@ -76,14 +169,25 @@ class SearchResultsView extends StatelessWidget {
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
             itemCount: filteredNotes.length,
-            itemBuilder: (context, index) => NoteCard(
-              docId: filteredNotes[index].id,
-              data: filteredNotes[index].data() as Map<String, dynamic>,
-              firestoreService: firestoreService,
-              primaryBlue: primaryBlue,
-              textColor: textColor,
-              subtleTextColor: subtleTextColor,
-            ),
+            itemBuilder: (context, index) {
+              // Definisikan variabel di sini, di dalam scope itemBuilder
+              final noteDoc = filteredNotes[index];
+              final noteData = noteDoc.data() as Map<String, dynamic>;
+
+              return NoteCard(
+                docId: noteDoc.id,
+                data: noteData,
+                firestoreService: firestoreService,
+                primaryBlue: primaryBlue,
+                textColor: textColor,
+                subtleTextColor: subtleTextColor,
+                onTap: () {
+                  Provider.of<SearchProvider>(context, listen: false)
+                      .clearSearch();
+                  _handleNoteTap(context, noteData, noteDoc.id);
+                },
+              );
+            },
           );
         });
   }
@@ -124,6 +228,8 @@ class SearchResultsView extends StatelessWidget {
                 textColor: textColor,
                 subtleTextColor: subtleTextColor,
                 onTap: () {
+                  Provider.of<SearchProvider>(context, listen: false)
+                      .clearSearch();
                   Navigator.push(
                     context,
                     MaterialPageRoute(

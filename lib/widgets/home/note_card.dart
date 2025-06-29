@@ -16,6 +16,7 @@ class NoteCard extends StatelessWidget {
   final Color primaryBlue;
   final Color textColor;
   final Color subtleTextColor;
+  final VoidCallback? onTap; 
 
   const NoteCard({
     super.key,
@@ -25,6 +26,7 @@ class NoteCard extends StatelessWidget {
     required this.primaryBlue,
     required this.textColor,
     required this.subtleTextColor,
+    this.onTap,
   });
 
   // --- NEW: LOGIC TO HANDLE NOTE TAP ---
@@ -36,19 +38,16 @@ class NoteCard extends StatelessWidget {
     final bool hasPurchased = purchasedBy.contains(currentUserId);
     final bool isOwner = data['ownerId'] == currentUserId;
 
-    // If the note is not premium, or the user is the owner, or they have already purchased it
     if (!isPremium || isOwner || hasPurchased) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => NoteDetailScreen(noteId: docId)),
       );
     } else {
-      // If the note is premium and not yet purchased, show a confirmation dialog
       _showPurchaseConfirmationDialog(context);
     }
   }
 
-  // --- NEW: PURCHASE CONFIRMATION DIALOG ---
   void _showPurchaseConfirmationDialog(BuildContext context) {
     final int price = data['coinPrice'] ?? 0;
     final User? currentUser = FirebaseAuth.instance.currentUser;
@@ -69,12 +68,11 @@ class NoteCard extends StatelessWidget {
             onPressed: () async {
               if (currentUser == null) return;
               
-              Navigator.of(dialogContext).pop(); // Close confirmation dialog first
+              Navigator.of(dialogContext).pop(); 
               
               final result = await firestoreService.purchaseNote(currentUser.uid, docId);
 
               if (result == "Purchase successful!") {
-                // Navigate to the note detail screen after successful purchase
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => NoteDetailScreen(noteId: docId)),
@@ -122,7 +120,7 @@ class NoteCard extends StatelessWidget {
     final bool isPremium = data['isPremium'] ?? false;
 
     return InkWell(
-      onTap: () => _handleNoteTap(context), // Use the new handler function
+      onTap: onTap ?? () => _handleNoteTap(context),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24.0),
         decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
@@ -145,7 +143,6 @@ class NoteCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(userFullName, style: GoogleFonts.lato(fontSize: 18, color: textColor)),
-                      // --- NEW: Show a premium icon ---
                       if (isPremium)
                         Padding(
                           padding: const EdgeInsets.only(left: 8.0),
