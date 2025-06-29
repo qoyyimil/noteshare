@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Consumer<SearchProvider>(
         builder: (context, searchProvider, child) {
           if (searchProvider.searchQuery.isNotEmpty) {
-            return const SearchResultsView();
+            return SearchResultsView();
           }
           return child!;
         },

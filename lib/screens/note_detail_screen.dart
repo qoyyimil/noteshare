@@ -153,7 +153,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: backgroundColor, searchKeyword: '', onClearSearch: () {  },
+        sidebarBgColor: backgroundColor, searchKeyword: '',
+        onClearSearch: () {},
         // searchKeyword dan onClearSearch DIHAPUS
       ),
       body: Consumer<SearchProvider>(

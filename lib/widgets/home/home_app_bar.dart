@@ -65,7 +65,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         context,
         MaterialPageRoute(builder: (context) => const MyCoinsScreen()),
       );
-    } else if (value == 'earnings') { // Add case for earnings
+    } else if (value == 'earnings') {
+      // Add case for earnings
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const CreatorEarningsScreen()),
@@ -100,7 +101,14 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: GestureDetector(
                   onTap: () {
-                    Provider.of<SearchProvider>(context, listen: false).clearSearch();
+                    // Membersihkan pencarian dan kembali ke HomeScreen
+                    searchProvider.clearSearch();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const HomeScreen()),
+                      (route) => false,
+                    );
                   },
                   child: Image.asset(
                     'assets/Logo.png',
@@ -130,8 +138,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     decoration: InputDecoration(
                       hintText: 'Search notes or users...',
                       hintStyle: TextStyle(color: subtleTextColor),
-                      prefixIcon:
-                          const Icon(Icons.search, size: 20, color: Colors.grey),
+                      prefixIcon: const Icon(Icons.search,
+                          size: 20, color: Colors.grey),
                       suffixIcon: searchKeyword.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear,
@@ -144,8 +152,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                           : null,
                       filled: true,
                       fillColor: sidebarBgColor,
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 0, horizontal: 0),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -183,10 +191,13 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const NotificationsScreen()),
                         );
                       },
-                      icon: Icon(Icons.notifications_none, color: subtleTextColor),
+                      icon: Icon(Icons.notifications_none,
+                          color: subtleTextColor),
                       tooltip: 'Notifications',
                     ),
                   );
@@ -197,42 +208,79 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               // --- PERBAIKAN UI DROPDOWN MENU DI SINI ---
               if (currentUser != null)
                 FutureBuilder<DocumentSnapshot>(
-                  future: FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).get(),
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(currentUser!.uid)
+                      .get(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      return const CircleAvatar(radius: 18, child: SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)));
+                      return const CircleAvatar(
+                          radius: 18,
+                          child: SizedBox(
+                              width: 15,
+                              height: 15,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white)));
                     }
 
-                    final userData = snapshot.data!.data() as Map<String, dynamic>?;
-                    final bool canPostPremium = userData?['canPostPremium'] ?? false;
-                    final String displayLetter = (userData?['fullName']?.isNotEmpty == true) ? userData!['fullName']![0].toUpperCase() : 'U';
+                    final userData =
+                        snapshot.data!.data() as Map<String, dynamic>?;
+                    final bool canPostPremium =
+                        userData?['canPostPremium'] ?? false;
+                    final String displayLetter =
+                        (userData?['fullName']?.isNotEmpty == true)
+                            ? userData!['fullName']![0].toUpperCase()
+                            : 'U';
 
                     return PopupMenuButton<String>(
-                      onSelected: (value) => _onMenuItemSelected(value, context),
+                      onSelected: (value) =>
+                          _onMenuItemSelected(value, context),
                       offset: const Offset(0, 40),
                       color: Colors.white, // 1. Memastikan background putih
-                      elevation: 8,       // 2. Menambahkan bayangan (shadow)
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 8, // 2. Menambahkan bayangan (shadow)
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       itemBuilder: (context) => [
-                        const PopupMenuItem<String>(value: 'profile', child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profile'))),
-                        const PopupMenuItem<String>(value: 'library', child: ListTile(leading: Icon(Icons.bookmark_border), title: Text('Library'))),
-                        const PopupMenuItem<String>(value: 'notes', child: ListTile(leading: Icon(Icons.note_alt_outlined), title: Text('My Notes'))),
-                        const PopupMenuItem<String>(value: 'stats', child: ListTile(leading: Icon(Icons.bar_chart_outlined), title: Text('Statistics'))),
-                        const PopupMenuItem<String>(value: 'coins', child: ListTile(leading: Icon(Icons.monetization_on_outlined), title: Text('My Coins'))),
-                        
+                        const PopupMenuItem<String>(
+                            value: 'profile',
+                            child: ListTile(
+                                leading: Icon(Icons.person_outline),
+                                title: Text('Profile'))),
+                        const PopupMenuItem<String>(
+                            value: 'library',
+                            child: ListTile(
+                                leading: Icon(Icons.bookmark_border),
+                                title: Text('Library'))),
+                        const PopupMenuItem<String>(
+                            value: 'notes',
+                            child: ListTile(
+                                leading: Icon(Icons.note_alt_outlined),
+                                title: Text('My Notes'))),
+                        const PopupMenuItem<String>(
+                            value: 'stats',
+                            child: ListTile(
+                                leading: Icon(Icons.bar_chart_outlined),
+                                title: Text('Statistics'))),
+                        const PopupMenuItem<String>(
+                            value: 'coins',
+                            child: ListTile(
+                                leading: Icon(Icons.monetization_on_outlined),
+                                title: Text('My Coins'))),
                         if (canPostPremium)
                           const PopupMenuItem<String>(
                             value: 'earnings',
                             child: ListTile(
-                              leading: Icon(Icons.paid_outlined, color: Colors.green),
+                              leading: Icon(Icons.paid_outlined,
+                                  color: Colors.green),
                               title: Text('Creator Earnings'),
                             ),
                           ),
-
                         const PopupMenuDivider(),
                         const PopupMenuItem<String>(
                           value: 'logout',
-                          child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Log Out')),
+                          child: ListTile(
+                              leading: Icon(Icons.logout, color: Colors.red),
+                              title: Text('Log Out')),
                         ),
                       ],
                       child: CircleAvatar(
@@ -240,7 +288,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                         backgroundColor: primaryBlue,
                         child: Text(
                           displayLetter,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
                     );
