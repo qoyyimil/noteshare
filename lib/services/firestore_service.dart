@@ -1,8 +1,10 @@
+// lib/services/firestore_service.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // --- ADDED: Enum for notification types for easier management ---
-enum NotificationType { like, comment, follow }
+enum NotificationType { like, comment, follow, purchase }
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -101,7 +103,7 @@ class FirestoreService {
     });
   }
 
-  // MODIFIED: This function now logs earnings for the author.
+  // MODIFIED: This function now logs earnings and sends notifications.
   Future<String> purchaseNote(String userId, String noteId) async {
     final userRef = users.doc(userId);
     final noteRef = notes.doc(noteId);
@@ -121,6 +123,7 @@ class FirestoreService {
       final int notePrice = noteData['coinPrice'] ?? 0;
       final String authorId = noteData['ownerId'];
       final String noteTitle = noteData['title'] ?? 'Untitled Note';
+      final String authorName = noteData['fullName'] ?? 'An author';
 
       if (userCoins < notePrice) {
         return "Not enough coins!";
@@ -130,16 +133,16 @@ class FirestoreService {
       transaction.update(userRef, {'coins': FieldValue.increment(-notePrice)});
 
       // 2. Add the buyer's UID to the note's purchasedBy list
-      transaction.update(noteRef, {'purchasedBy': FieldValue.arrayUnion([userId])});
-      
+      transaction.update(
+          noteRef, {'purchasedBy': FieldValue.arrayUnion([userId])});
+
       // 3. Give a share of the coins to the author and log the earning
       final int authorShare = (notePrice * 0.8).toInt();
       if (authorShare > 0) {
         final authorRef = users.doc(authorId);
-        transaction.update(authorRef, {'coins': FieldValue.increment(authorShare)});
-        
-        // --- THIS IS THE NEW PART ---
-        // Log the earning event in the author's sub-collection
+        transaction
+            .update(authorRef, {'coins': FieldValue.increment(authorShare)});
+
         final earningRef = authorRef.collection('earnings').doc();
         transaction.set(earningRef, {
           'noteId': noteId,
@@ -148,6 +151,31 @@ class FirestoreService {
           'buyerId': userId,
           'timestamp': FieldValue.serverTimestamp(),
         });
+      }
+
+      // --- TAMBAHAN: KIRIM NOTIFIKASI ---
+      // Notifikasi untuk Pembeli
+      await addNotification(
+        targetUserId: userId,
+        type: NotificationType.purchase,
+        fromUserName: "System", // Atau nama aplikasi Anda
+        noteId: noteId,
+        noteTitle: noteTitle,
+        message: "You have successfully purchased '$noteTitle'.",
+      );
+
+      // Notifikasi untuk Penjual (jika akun premium)
+      final authorDoc = await transaction.get(users.doc(authorId));
+      if (authorDoc.exists && (authorDoc.data() as Map<String, dynamic>)['canPostPremium'] == true) {
+        await addNotification(
+          targetUserId: authorId,
+          type: NotificationType.purchase,
+          fromUserName: userData['fullName'] ?? 'A user', // Nama pembeli
+          noteId: noteId,
+          noteTitle: noteTitle,
+          message:
+              "Your note '$noteTitle' was purchased by ${userData['fullName'] ?? 'a user'}.",
+        );
       }
 
       return "Purchase successful!";
@@ -180,6 +208,7 @@ class FirestoreService {
     required String fromUserName,
     String? noteId,
     String? noteTitle,
+    String? message, // Tambahkan parameter message
   }) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null || targetUserId == currentUser.uid) return;
@@ -190,6 +219,7 @@ class FirestoreService {
       'fromUserName': fromUserName,
       'noteId': noteId,
       'noteTitle': noteTitle,
+      'message': message, // Simpan pesan kustom
       'timestamp': Timestamp.now(),
       'isRead': false,
     });

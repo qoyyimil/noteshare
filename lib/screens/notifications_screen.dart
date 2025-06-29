@@ -1,3 +1,5 @@
+// lib/screens/notifications_screen.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,12 +16,11 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-  String _selectedFilter = 'All'; // State untuk melacak filter yang aktif
+  String _selectedFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    // Saat halaman dibuka, tandai semua notif sebagai sudah dibaca
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _firestoreService.markAllNotificationsAsRead();
     });
@@ -30,7 +31,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        // AppBar sederhana untuk tombol kembali
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
@@ -50,7 +50,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
           final allNotifs = snapshot.data!.docs;
           
-          // Filter notifikasi berdasarkan state _selectedFilter
           final filteredNotifs = allNotifs.where((doc) {
             final type = doc['type'] as String;
             switch (_selectedFilter) {
@@ -60,6 +59,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 return type == 'comment';
               case 'Follow':
                 return type == 'follow';
+              case 'Purchases': // Filter baru
+                return type == 'purchase';
               case 'All':
               default:
                 return true;
@@ -126,10 +127,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-
   Widget _buildFilterTabs() {
+    // Menambahkan 'Purchases' ke dalam daftar filter
     return Row(
-      children: ['All', 'Likes', 'Comment', 'Follow']
+      children: ['All', 'Likes', 'Comment', 'Follow', 'Purchases']
           .map((filter) => _buildFilterButton(filter))
           .toList(),
     );
@@ -161,13 +162,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final type = data['type'];
     final fromUserName = data['fromUserName'] ?? 'Someone';
     final noteTitle = data['noteTitle'] ?? '';
+    final message = data['message'] as String?; // Ambil pesan kustom
     final timestamp = (data['timestamp'] as Timestamp).toDate();
     final bool isRead = data['isRead'] ?? true;
 
     String title;
     String description;
     
-    // Membuat pesan notifikasi yang lebih sesuai dengan desain baru
+    // Membuat pesan notifikasi yang lebih sesuai
     switch (type) {
       case 'like':
         title = 'Your note received a like';
@@ -180,6 +182,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'follow':
         title = 'You have a new follower';
         description = '$fromUserName started following you.';
+        break;
+      case 'purchase': // Penanganan untuk tipe notifikasi baru
+        title = 'Purchase Information';
+        description = message ?? 'There was a transaction related to "$noteTitle".'; // Gunakan pesan kustom
         break;
       default:
         title = 'New Notification';
