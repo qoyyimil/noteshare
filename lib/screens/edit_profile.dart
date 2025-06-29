@@ -19,10 +19,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  final TextEditingController educationController = TextEditingController();
   final TextEditingController birthDateController = TextEditingController();
   final TextEditingController aboutController = TextEditingController();
 
+  String? _selectedEducationLevel;
+  final List<String> _educationLevels = [
+    'High School',
+    'College Student',
+    'General'
+  ];
+
+  bool _isEditingName = false;
   bool _loading = false;
   bool _saving = false;
 
@@ -47,9 +54,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
     emailController.text = data['email'] ?? '';
     phoneController.text = data['phone'] ?? '';
     phoneController.text = data['phoneNumber'] ?? '';
-    educationController.text = data['educationLevel'] ?? '';
     birthDateController.text = data['birthDate'] ?? '';
     aboutController.text = data['about'] ?? '';
+
+    final educationLevelFromDB = data['educationLevel'];
+    if (educationLevelFromDB != null && _educationLevels.contains(educationLevelFromDB)) {
+      _selectedEducationLevel = educationLevelFromDB;
+    }
+
     setState(() => _loading = false);
   }
 
@@ -82,15 +94,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
           .update({
         'fullName': fullNameController.text.trim(),
         'phoneNumber': phoneController.text.trim(),
-        'educationLevel': educationController.text.trim(),
+        'educationLevel': _selectedEducationLevel,
         'birthDate': birthDateController.text.trim(),
         'about': aboutController.text.trim(),
-        'email': emailController.text.trim(), // update email di Firestore juga
+        'email': emailController.text.trim(),
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -153,7 +166,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1100),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 32),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -176,35 +190,71 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                         const CircleAvatar(
                                           radius: 40,
                                           backgroundColor: Colors.grey,
-                                          child: Icon(Icons.person, size: 60, color: Colors.white),
+                                          child: Icon(Icons.person,
+                                              size: 60, color: Colors.white),
                                         ),
                                         const SizedBox(height: 12),
-                                        ElevatedButton(
-                                          onPressed: () {},
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.blue,
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                          ),
-                                          child: const Text("Change Photo"),
-                                        ),
                                       ],
                                     ),
                                     const SizedBox(width: 32),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            fullNameController.text,
-                                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                                          Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Expanded(
+                                                child: _isEditingName
+                                                    ? TextFormField(
+                                                        controller:
+                                                            fullNameController,
+                                                        autofocus: true,
+                                                        style: const TextStyle(
+                                                            fontSize: 28,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                        decoration:
+                                                            const InputDecoration
+                                                                .collapsed(
+                                                                hintText:
+                                                                    'Your Name'),
+                                                      )
+                                                    : Text(
+                                                        fullNameController.text,
+                                                        style: const TextStyle(
+                                                            fontSize: 28,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                      ),
+                                              ),
+                                              IconButton(
+                                                icon: Icon(
+                                                    _isEditingName
+                                                        ? Icons.done
+                                                        : Icons.edit,
+                                                    color: primaryBlue),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    _isEditingName =
+                                                        !_isEditingName;
+                                                  });
+                                                },
+                                              ),
+                                            ],
                                           ),
                                           const SizedBox(height: 12),
                                           Row(
                                             children: [
-                                              _buildStatColumn(currentUser!.uid, true),
+                                              _buildStatColumn(
+                                                  currentUser!.uid, true),
                                               const SizedBox(width: 24),
-                                              _buildStatColumn(currentUser!.uid, false),
+                                              _buildStatColumn(
+                                                  currentUser!.uid, false),
                                             ],
                                           ),
                                         ],
@@ -214,7 +264,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ),
                               ),
                               const SizedBox(height: 32),
-                              const Text("About Me", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                              const Text("About Me",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20)),
                               const SizedBox(height: 12),
                               Container(
                                 width: double.infinity,
@@ -248,7 +301,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _profileField("Email", emailController, enabled: true),
+                              _profileField("Email", emailController,
+                                  enabled: true),
                               const SizedBox(height: 24),
                               _profileField("Phone Number", phoneController),
                               const SizedBox(height: 24),
@@ -263,7 +317,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              _profileField("Education Level", educationController),
+                              _buildEducationDropdown(),
                               const SizedBox(height: 40),
                               Row(
                                 children: [
@@ -273,17 +327,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.blue,
                                         foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(24)),
                                       ),
                                       child: _saving
                                           ? const SizedBox(
                                               width: 24,
                                               height: 24,
                                               child: CircularProgressIndicator(
-                                                  color: Colors.white, strokeWidth: 2),
+                                                  color: Colors.white,
+                                                  strokeWidth: 2),
                                             )
-                                          : const Text("Save", style: TextStyle(fontSize: 16)),
+                                          : const Text("Save",
+                                              style: TextStyle(fontSize: 16)),
                                     ),
                                   ),
                                   const SizedBox(width: 24),
@@ -297,10 +356,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.grey.shade200,
                                         foregroundColor: Colors.red,
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(24)),
                                       ),
-                                      child: const Text("Cancel", style: TextStyle(fontSize: 16)),
+                                      child: const Text("Cancel",
+                                          style: TextStyle(fontSize: 16)),
                                     ),
                                   ),
                                 ],
@@ -314,6 +377,40 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildEducationDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Education Level",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _selectedEducationLevel,
+          items: _educationLevels.map((String level) {
+            return DropdownMenuItem<String>(
+              value: level,
+              child: Text(level),
+            );
+          }).toList(),
+          onChanged: (newValue) {
+            setState(() {
+              _selectedEducationLevel = newValue;
+            });
+          },
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          ),
+        ),
+      ],
     );
   }
 
