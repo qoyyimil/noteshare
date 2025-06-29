@@ -7,7 +7,7 @@ import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/screens/edit_profile.dart';
 import 'package:noteshare/screens/profile.dart';
-import 'package:noteshare/screens/public_profile.dart';
+import 'package:noteshare/widgets/home/public_profile_screen.dart';
 import 'package:noteshare/screens/top_up_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/comment_section.dart';

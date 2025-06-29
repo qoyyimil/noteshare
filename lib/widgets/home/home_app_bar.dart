@@ -100,12 +100,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const HomeScreen()),
-                      (route) => false,
-                    );
+                    Provider.of<SearchProvider>(context, listen: false).clearSearch();
                   },
                   child: Image.asset(
                     'assets/Logo.png',

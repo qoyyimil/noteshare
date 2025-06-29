@@ -6,7 +6,7 @@ import 'package:noteshare/widgets/home/note_card.dart';
 import 'package:noteshare/widgets/home/people_card.dart';
 import 'package:noteshare/widgets/home/search_tabs.dart';
 import 'package:provider/provider.dart';
-import 'package:noteshare/screens/public_profile.dart';
+import 'package:noteshare/widgets/home/public_profile_screen.dart';
 
 class SearchResultsView extends StatelessWidget {
   const SearchResultsView({super.key});
