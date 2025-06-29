@@ -112,11 +112,14 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Sign In", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              const Text("Sign In",
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-              Text("Welcome back! Login to continue.", style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+              Text("Welcome back! Login to continue.",
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
               const SizedBox(height: 40),
-              const Text("Email", style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text("Email",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: emailController,
@@ -128,20 +131,26 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontWeight: FontWeight.w400,
                     fontSize: 14,
                   ),
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8))),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text("Password", style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text("Password",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: passwordController,
                 obscureText: !_isPasswordVisible,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   suffixIcon: IconButton(
-                    icon: Icon(_isPasswordVisible ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                    icon: Icon(_isPasswordVisible
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: () => setState(
+                        () => _isPasswordVisible = !_isPasswordVisible),
                   ),
                 ),
               ),
@@ -151,7 +160,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Row(
                     children: [
-                      Checkbox(value: _rememberMe, onChanged: (value) => setState(() => _rememberMe = value!)),
+                      Checkbox(
+                          value: _rememberMe,
+                          onChanged: (value) =>
+                              setState(() => _rememberMe = value!)),
                       const Text("Remember me"),
                     ],
                   ),
@@ -159,7 +171,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordScreen()),
                       );
                     },
                     child: const Text("Forgot Password"),
@@ -182,13 +195,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Colors.blueAccent,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   child: _loading
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
                         )
                       : const Text("Sign in", style: TextStyle(fontSize: 16)),
                 ),
@@ -206,7 +221,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text(
                       "Sign up",
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueAccent),
                     ),
                   ),
                 ],
