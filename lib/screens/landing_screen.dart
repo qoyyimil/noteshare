@@ -27,9 +27,9 @@ class LandingScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'NoteShare',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                  Image.asset(
+                    'assets/Logo.png',
+                    height: 24, // Atur tinggi logo sesuai kebutuhan
                   ),
                   if (isDesktop)
                     Row(

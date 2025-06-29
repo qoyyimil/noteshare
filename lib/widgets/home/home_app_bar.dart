@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/screens/creator_earnings_screen.dart';
 import 'package:noteshare/screens/home_screen.dart';
-import 'package:noteshare/screens/landing_screen.dart';
+import 'package:noteshare/screens/login_screen.dart';
 import 'package:noteshare/screens/my_bookmarks_screen.dart';
 import 'package:noteshare/screens/my_coins_screen.dart';
 import 'package:noteshare/screens/my_notes_screen.dart';
@@ -74,7 +74,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       await FirebaseAuth.instance.signOut();
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const LandingScreen()),
+        MaterialPageRoute(builder: (context) => const LoginScreen(onTap: null)),
         (route) => false,
       );
     }
@@ -199,13 +199,12 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const SizedBox(width: 8),
 
-              // --- MODIFIED: Use FutureBuilder to check for premium status ---
+              // --- PERBAIKAN UI DROPDOWN MENU DI SINI ---
               if (currentUser != null)
                 FutureBuilder<DocumentSnapshot>(
                   future: FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).get(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      // Show a placeholder while loading user data
                       return const CircleAvatar(radius: 18, child: SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)));
                     }
 
@@ -216,6 +215,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     return PopupMenuButton<String>(
                       onSelected: (value) => _onMenuItemSelected(value, context),
                       offset: const Offset(0, 40),
+                      color: Colors.white, // 1. Memastikan background putih
+                      elevation: 8,       // 2. Menambahkan bayangan (shadow)
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       itemBuilder: (context) => [
                         const PopupMenuItem<String>(value: 'profile', child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profile'))),
@@ -224,7 +225,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                         const PopupMenuItem<String>(value: 'stats', child: ListTile(leading: Icon(Icons.bar_chart_outlined), title: Text('Statistics'))),
                         const PopupMenuItem<String>(value: 'coins', child: ListTile(leading: Icon(Icons.monetization_on_outlined), title: Text('My Coins'))),
                         
-                        // --- NEW: Conditionally display the Earnings menu item ---
                         if (canPostPremium)
                           const PopupMenuItem<String>(
                             value: 'earnings',

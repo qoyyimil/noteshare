@@ -290,71 +290,111 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
     );
   }
 
-  Widget _buildConfigurationSection() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200)),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
+   Widget _buildConfigurationSection() {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      spreadRadius: 1,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedCategory,
                     isExpanded: true,
-                    items: _categories.map((String category) => DropdownMenuItem<String>(value: category, child: Text(category, style: GoogleFonts.lato()))).toList(),
-                    onChanged: (newValue) => setState(() => _selectedCategory = newValue),
+                    items: _categories
+                        .map((String category) => DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category, style: GoogleFonts.lato())))
+                        .toList(),
+                    onChanged: (newValue) =>
+                        setState(() => _selectedCategory = newValue),
                     icon: const Icon(Icons.arrow_drop_down, color: subtleTextColor),
+                    dropdownColor: Colors.white,
                   ),
                 ),
               ),
-              const VerticalDivider(width: 20),
-              Text('Public', style: GoogleFonts.lato(color: subtleTextColor)),
+            ),
+            const SizedBox(width: 24),
+            Text('Public', style: GoogleFonts.lato(color: subtleTextColor)),
+            const SizedBox(width: 8),
+            Switch(
+              value: _isPublic,
+              onChanged: (value) => setState(() => _isPublic = value),
+              activeColor: primaryBlue,
+            ),
+          ],
+        ),
+        if (_canPostPremium) ...[
+          const Divider(height: 24),
+          Row(
+            children: [
               const SizedBox(width: 8),
+              const Icon(Icons.workspace_premium_outlined, color: Colors.amber),
+              const SizedBox(width: 8),
+              Text("Set as Premium Note", style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
+              const Spacer(),
               Switch(
-                value: _isPublic,
-                onChanged: (value) => setState(() => _isPublic = value),
-                activeColor: primaryBlue,
+                value: _isPremiumNote,
+                onChanged: (value) => setState(() => _isPremiumNote = value),
+                activeColor: Colors.amber,
               ),
             ],
           ),
-          if (_canPostPremium) ...[
-            const Divider(),
-            Row(
-              children: [
-                const SizedBox(width: 8),
-                const Icon(Icons.workspace_premium_outlined, color: Colors.amber),
-                const SizedBox(width: 8),
-                Text("Set as Premium Note", style: GoogleFonts.lato()),
-                const Spacer(),
-                Switch(
-                  value: _isPremiumNote,
-                  onChanged: (value) => setState(() => _isPremiumNote = value),
-                  activeColor: Colors.amber,
+          if (_isPremiumNote)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.15),
+                      spreadRadius: 1,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            if (_isPremiumNote)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                 child: DropdownButtonFormField<int>(
                   value: _selectedPrice,
-                  items: _coinPrices.map((price) => DropdownMenuItem<int>(value: price, child: Text("$price Coins"))).toList(),
+                  items: _coinPrices
+                      .map((price) => DropdownMenuItem<int>(
+                          value: price, child: Text("$price Coins")))
+                      .toList(),
                   onChanged: (value) => setState(() => _selectedPrice = value),
+                  // --- PERBAIKAN DI SINI ---
+                  dropdownColor: Colors.white, // Menetapkan warna background menu saat dibuka
                   decoration: InputDecoration(
                     labelText: "Note Price",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    isDense: true,
+                    labelStyle: TextStyle(color: textColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
                 ),
-              )
-          ]
-        ],
-      ),
+              ),
+            )
+        ]
+      ],
     );
   }
 }
