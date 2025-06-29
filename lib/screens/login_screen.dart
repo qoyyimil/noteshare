@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:noteshare/auth/auth_gate.dart';
 import 'package:noteshare/auth/auth_service.dart';
@@ -67,9 +68,32 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
         );
       }
+    } on FirebaseAuthException catch (e) {
+      // --- PERBAIKAN DI SINI ---
+      // Memberikan pesan error yang lebih spesifik berdasarkan kode error dari Firebase.
+      String errorMessage;
+      switch (e.code) {
+        case 'invalid-credential':
+        case 'user-not-found':
+        case 'wrong-password':
+          errorMessage = "Invalid email or password. Please try again.";
+          break;
+        case 'invalid-email':
+          errorMessage = "The email address is not valid.";
+          break;
+        case 'user-disabled':
+          errorMessage = "This user account has been disabled.";
+          break;
+        default:
+          errorMessage = "An unexpected error occurred. Please try again.";
+      }
+      setState(() {
+        _errorText = errorMessage;
+        _loading = false;
+      });
     } catch (e) {
       setState(() {
-        _errorText = "Login Failed: ${e.toString()}";
+        _errorText = "Login Failed: An unexpected error occurred.";
         _loading = false;
       });
     }
@@ -175,9 +199,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Text("Don't have an account?"),
                   const SizedBox(width: 4),
+                  // --- PERBAIKAN DI SINI ---
+                  // GestureDetector ini akan memicu fungsi onTap yang diterima dari parent widget (LoginOrRegister).
                   GestureDetector(
                     onTap: widget.onTap,
-                    child: const Text("Sign up", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                    child: const Text(
+                      "Sign up",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                    ),
                   ),
                 ],
               ),
