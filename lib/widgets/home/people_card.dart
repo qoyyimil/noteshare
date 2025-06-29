@@ -45,15 +45,15 @@ class PeopleCard extends StatelessWidget {
                         fontSize: 16,
                         color: textColor,
                         fontWeight: FontWeight.bold))),
-            OutlinedButton(
-              onPressed: () {/* TODO: Implement follow logic */},
-              child: const Text('Follow'),
-              style: OutlinedButton.styleFrom(
-                  foregroundColor: subtleTextColor,
-                  side: const BorderSide(color: Color(0xFFE5E7EB)),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20))),
-            )
+            // OutlinedButton(
+            //   onPressed: () {/* TODO: Implement follow logic */},
+            //   child: const Text('Follow'),
+            //   style: OutlinedButton.styleFrom(
+            //       foregroundColor: subtleTextColor,
+            //       side: const BorderSide(color: Color(0xFFE5E7EB)),
+            //       shape: RoundedRectangleBorder(
+            //           borderRadius: BorderRadius.circular(20))),
+            // )
           ],
         ),
       ),
