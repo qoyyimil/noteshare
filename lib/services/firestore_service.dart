@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// --- TAMBAHAN: Enum untuk tipe notifikasi agar lebih mudah dikelola ---
+// --- ADDED: Enum for notification types for easier management ---
 enum NotificationType { like, comment, follow }
 
 class FirestoreService {
@@ -18,22 +18,174 @@ class FirestoreService {
     reports = _firestore.collection('reports');
   }
 
-  // --- FUNGSI BARU UNTUK NOTIFIKASI ---
+  // ===============================================================
+  // --- NEW FUNCTIONS FOR CREATOR EARNINGS & WITHDRAWALS ---
+  // ===============================================================
 
-  // Membuat notifikasi baru untuk pengguna tertentu
+  // Request a dummy withdrawal
+  Future<void> requestWithdrawal({
+    required String userId,
+    required int amount,
+    required String method,
+    required String accountNumber,
+  }) async {
+    final userRef = users.doc(userId);
+    final userSnapshot = await userRef.get();
+    
+    if (!userSnapshot.exists) {
+      throw Exception("User not found.");
+    }
+
+    final userData = userSnapshot.data() as Map<String, dynamic>;
+    final currentCoins = userData['coins'] ?? 0;
+
+    if (amount <= 0) {
+      throw Exception("Withdrawal amount must be greater than zero.");
+    }
+    if (currentCoins < amount) {
+      throw Exception("Insufficient coins for withdrawal.");
+    }
+
+    // Use a transaction to ensure atomicity
+    await _firestore.runTransaction((transaction) async {
+      // 1. Deduct coins from the user's wallet
+      transaction.update(userRef, {'coins': FieldValue.increment(-amount)});
+
+      // 2. Create a record in the withdrawals sub-collection
+      final withdrawalRef = userRef.collection('withdrawals').doc();
+      transaction.set(withdrawalRef, {
+        'amount': amount,
+        'method': method,
+        'accountDetails': accountNumber,
+        'status': 'Pending', // In a real app, this would be processed by an admin
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  // Get the stream of earnings for a creator
+  Stream<QuerySnapshot> getEarningsHistory(String userId) {
+    return users
+        .doc(userId)
+        .collection('earnings')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  // Get the stream of withdrawal history for a creator
+  Stream<QuerySnapshot> getWithdrawalHistory(String userId) {
+    return users
+        .doc(userId)
+        .collection('withdrawals')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+  
+  // ===============================================================
+  // --- EXISTING FUNCTIONS (Unchanged or Modified) ---
+  // ===============================================================
+
+  // Get user data stream in real-time (includes coins and premium status)
+  Stream<DocumentSnapshot> getUserStream(String userId) {
+    return users.doc(userId).snapshots();
+  }
+
+  // Add coins to a user's account (for the dummy top-up system)
+  Future<void> addCoinsToUser(String userId, int coinsToAdd) {
+    if (coinsToAdd <= 0) {
+      throw Exception("Coin amount must be positive.");
+    }
+    final userRef = users.doc(userId);
+    return userRef.update({
+      'coins': FieldValue.increment(coinsToAdd),
+    });
+  }
+
+  // MODIFIED: This function now logs earnings for the author.
+  Future<String> purchaseNote(String userId, String noteId) async {
+    final userRef = users.doc(userId);
+    final noteRef = notes.doc(noteId);
+
+    return await _firestore.runTransaction((transaction) async {
+      final userSnapshot = await transaction.get(userRef);
+      final noteSnapshot = await transaction.get(noteRef);
+
+      if (!userSnapshot.exists || !noteSnapshot.exists) {
+        throw Exception("User or Note not found!");
+      }
+
+      final userData = userSnapshot.data() as Map<String, dynamic>;
+      final noteData = noteSnapshot.data() as Map<String, dynamic>;
+
+      final int userCoins = userData['coins'] ?? 0;
+      final int notePrice = noteData['coinPrice'] ?? 0;
+      final String authorId = noteData['ownerId'];
+      final String noteTitle = noteData['title'] ?? 'Untitled Note';
+
+      if (userCoins < notePrice) {
+        return "Not enough coins!";
+      }
+
+      // 1. Deduct coins from the buyer
+      transaction.update(userRef, {'coins': FieldValue.increment(-notePrice)});
+
+      // 2. Add the buyer's UID to the note's purchasedBy list
+      transaction.update(noteRef, {'purchasedBy': FieldValue.arrayUnion([userId])});
+      
+      // 3. Give a share of the coins to the author and log the earning
+      final int authorShare = (notePrice * 0.8).toInt();
+      if (authorShare > 0) {
+        final authorRef = users.doc(authorId);
+        transaction.update(authorRef, {'coins': FieldValue.increment(authorShare)});
+        
+        // --- THIS IS THE NEW PART ---
+        // Log the earning event in the author's sub-collection
+        final earningRef = authorRef.collection('earnings').doc();
+        transaction.set(earningRef, {
+          'noteId': noteId,
+          'noteTitle': noteTitle,
+          'coinsEarned': authorShare,
+          'buyerId': userId,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return "Purchase successful!";
+    });
+  }
+
+  // Check if a user is eligible to post premium content.
+  Future<bool> checkPremiumEligibility(String userId) async {
+    const int requiredFollowers = 50;
+    const int requiredLikes = 100;
+
+    final followersSnapshot = await users.doc(userId).collection('followers').get();
+    if (followersSnapshot.docs.length < requiredFollowers) return false;
+
+    final notesSnapshot = await notes.where('ownerId', isEqualTo: userId).get();
+    int totalLikes = 0;
+    for (var doc in notesSnapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      totalLikes += (data['likes'] as List?)?.length ?? 0;
+    }
+    if (totalLikes < requiredLikes) return false;
+
+    return true;
+  }
+
+  // --- NOTIFICATION FUNCTIONS ---
   Future<void> addNotification({
-    required String targetUserId, // UID pengguna yang akan menerima notif
+    required String targetUserId,
     required NotificationType type,
     required String fromUserName,
     String? noteId,
     String? noteTitle,
   }) async {
-    // Jangan kirim notif jika pengguna berinteraksi dengan dirinya sendiri
     final currentUser = _auth.currentUser;
     if (currentUser == null || targetUserId == currentUser.uid) return;
 
     await users.doc(targetUserId).collection('notifications').add({
-      'type': type.name, // 'like', 'comment', 'follow'
+      'type': type.name,
       'fromUserId': currentUser.uid,
       'fromUserName': fromUserName,
       'noteId': noteId,
@@ -43,7 +195,6 @@ class FirestoreService {
     });
   }
 
-  // Mendapatkan stream notifikasi untuk pengguna saat ini
   Stream<QuerySnapshot> getNotificationsStream() {
     final user = _auth.currentUser;
     if (user == null) return const Stream.empty();
@@ -54,7 +205,6 @@ class FirestoreService {
         .snapshots();
   }
   
-  // Mendapatkan jumlah notifikasi yang belum dibaca
   Stream<int> getUnreadNotificationsCountStream() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(0);
@@ -66,9 +216,8 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.length);
   }
 
-  // Menandai semua notifikasi sebagai sudah dibaca
   Future<void> markAllNotificationsAsRead() async {
-     final user = _auth.currentUser;
+    final user = _auth.currentUser;
     if (user == null) return;
     
     final unreadNotifs = await users
@@ -84,18 +233,16 @@ class FirestoreService {
     await batch.commit();
   }
 
-
-  // --- FUNGSI LAMA DENGAN PENAMBAHAN LOGIKA NOTIFIKASI ---
-
-  // Save user record
+  // --- CORE NOTE AND USER FUNCTIONS ---
   Future<void> saveUserRecord(User user) {
     return users.doc(user.uid).set({
       'email': user.email,
       'uid': user.uid,
+      'coins': 0,
+      'canPostPremium': false,
     }, SetOptions(merge: true));
   }
 
-  // Add a new note
   Future<void> addNote(
     String title,
     String content,
@@ -104,6 +251,8 @@ class FirestoreService {
     required String fullName,
     required String userId,
     required String? userEmail,
+    bool isPremium = false,
+    int coinPrice = 0,
   }) {
     return notes.add({
       'title': title,
@@ -113,15 +262,30 @@ class FirestoreService {
       'timestamp': Timestamp.now(),
       'ownerId': userId,
       'userEmail': userEmail,
-      'fullName': fullName, // <-- Tambahkan fullName
+      'fullName': fullName, 
       'allowed_users': [userId],
       'bookmarkCount': 0,
       'likes': [],
       'readCount': 0,
+      'isPremium': isPremium,
+      'coinPrice': coinPrice,
+      'purchasedBy': [],
     });
   }
 
-  // Invite user to note by email
+  Future<void> updateNote(String docID, String newTitle, String newContent,
+      String newCategory, bool newIsPublic, {bool isPremium = false, int coinPrice = 0}) {
+    return notes.doc(docID).update({
+      'title': newTitle,
+      'content': newContent,
+      'category': newCategory,
+      'isPublic': newIsPublic,
+      'timestamp': Timestamp.now(),
+      'isPremium': isPremium,
+      'coinPrice': coinPrice,
+    });
+  }
+
   Future<String> inviteUserToNote(
       {required String noteId, required String email}) async {
     try {
@@ -140,7 +304,6 @@ class FirestoreService {
     }
   }
 
-  // Get private notes (where user is in allowed_users)
   Stream<QuerySnapshot> getMyNotesStream() {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) return const Stream.empty();
@@ -150,7 +313,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // Get all public notes
   Stream<QuerySnapshot> getPublicNotesStream() {
     return notes
         .where('isPublic', isEqualTo: true)
@@ -158,7 +320,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // Get public notes by ownerId (for public profile)
   Stream<QuerySnapshot> getPublicNotesByOwnerIdStream(String ownerId) {
     return notes
         .where('ownerId', isEqualTo: ownerId)
@@ -167,7 +328,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // Get a single note stream
   Stream<DocumentSnapshot> getNoteStream(String noteId) {
     return notes.doc(noteId).snapshots();
   }
@@ -186,28 +346,21 @@ class FirestoreService {
         if (snapshot.docs.isEmpty) {
           return {'totalLikes': 0, 'totalReads': 0, 'dailyStats': <DateTime, Map<String, int>>{}};
         }
-
         int totalLikes = 0;
         int totalReads = 0;
         Map<DateTime, Map<String, int>> dailyStats = {};
-
         for (var doc in snapshot.docs) {
           final data = doc.data() as Map<String, dynamic>;
-          
           totalLikes += (data['likes'] as List?)?.length ?? 0;
           totalReads += (data['readCount'] as int?) ?? 0;
-          
           final timestamp = (data['timestamp'] as Timestamp).toDate();
           final dayKey = DateTime(timestamp.year, timestamp.month, timestamp.day);
-
           if (!dailyStats.containsKey(dayKey)) {
             dailyStats[dayKey] = {'likes': 0, 'reads': 0};
           }
-          
           dailyStats[dayKey]!['likes'] = (dailyStats[dayKey]!['likes'] ?? 0) + ((data['likes'] as List?)?.length ?? 0);
           dailyStats[dayKey]!['reads'] = (dailyStats[dayKey]!['reads'] ?? 0) + ((data['readCount'] as int?) ?? 0);
         }
-        
         return {
           'totalLikes': totalLikes,
           'totalReads': totalReads,
@@ -216,35 +369,16 @@ class FirestoreService {
       });
   }
 
-  // Update a note
-  Future<void> updateNote(String docID, String newTitle, String newContent,
-      String newCategory, bool newIsPublic) {
-    return notes.doc(docID).update({
-      'title': newTitle,
-      'content': newContent,
-      'category': newCategory,
-      'isPublic': newIsPublic,
-      'timestamp': Timestamp.now(),
-    });
-  }
-
-  // Delete a note
   Future<void> deleteNote(String docID) {
     return notes.doc(docID).delete();
   }
 
-  // Toggle like on a note
-  Future<void> toggleLike(String noteId, String userId, bool isLiked) async { // <-- Diubah menjadi async
+  Future<void> toggleLike(String noteId, String userId, bool isLiked) async {
     final noteRef = notes.doc(noteId);
     if (isLiked) {
-      await noteRef.update({ // <-- Ditambah await
-        'likes': FieldValue.arrayRemove([userId])
-      });
+      await noteRef.update({'likes': FieldValue.arrayRemove([userId])});
     } else {
-      await noteRef.update({ // <-- Ditambah await
-        'likes': FieldValue.arrayUnion([userId])
-      });
-      // --- TAMBAHAN: Kirim notifikasi like ---
+      await noteRef.update({'likes': FieldValue.arrayUnion([userId])});
       final noteDoc = await noteRef.get();
       if (noteDoc.exists) {
         final noteData = noteDoc.data() as Map<String, dynamic>;
@@ -258,8 +392,6 @@ class FirestoreService {
       }
     }
   }
-
-  // ===================== KOMENTAR =====================
   
   Stream<QuerySnapshot> getCommentsStream(String noteId) {
     return notes
@@ -275,8 +407,8 @@ class FirestoreService {
     required String userId,
     required String userEmail,
     String? parentCommentId,
-  }) async { // <-- Diubah menjadi async
-    await notes.doc(noteId).collection('comments').add({ // <-- Ditambah await
+  }) async { 
+    await notes.doc(noteId).collection('comments').add({
       'text': text,
       'userId': userId,
       'userEmail': userEmail,
@@ -284,7 +416,6 @@ class FirestoreService {
       'parentCommentId': parentCommentId,
       'likes': [],
     });
-    // --- TAMBAHAN: Kirim notifikasi komentar ---
     final noteDoc = await notes.doc(noteId).get();
     if (noteDoc.exists) {
       final noteData = noteDoc.data() as Map<String, dynamic>;
@@ -306,8 +437,6 @@ class FirestoreService {
     }
   }
 
-  // ===================== REPORT =====================
-
   Future<void> addReport({
     required String noteId,
     required String noteOwnerId,
@@ -326,8 +455,6 @@ class FirestoreService {
     });
   }
 
-  // ===================== BOOKMARK =====================
-
   Future<void> toggleBookmark(String noteId) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception("User not logged in.");
@@ -337,19 +464,16 @@ class FirestoreService {
     final noteRef = notes.doc(noteId);
 
     await _firestore.runTransaction((transaction) async {
-      DocumentSnapshot userBookmarkSnapshot =
-          await transaction.get(userBookmarkRef);
+      DocumentSnapshot userBookmarkSnapshot = await transaction.get(userBookmarkRef);
       DocumentSnapshot noteSnapshot = await transaction.get(noteRef);
 
       if (!noteSnapshot.exists) throw Exception("Note does not exist!");
 
       if (userBookmarkSnapshot.exists) {
         transaction.delete(userBookmarkRef);
-        transaction
-            .update(noteRef, {'bookmarkCount': FieldValue.increment(-1)});
+        transaction.update(noteRef, {'bookmarkCount': FieldValue.increment(-1)});
       } else {
-        transaction
-            .set(userBookmarkRef, {'timestamp': FieldValue.serverTimestamp()});
+        transaction.set(userBookmarkRef, {'timestamp': FieldValue.serverTimestamp()});
         transaction.update(noteRef, {'bookmarkCount': FieldValue.increment(1)});
       }
     });
@@ -401,8 +525,6 @@ class FirestoreService {
     });
   }
 
-  // ===================== FOLLOW/UNFOLLOW =====================
-  
   Future<void> toggleFollowUser(String targetUserId) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception("User not logged in");
@@ -411,8 +533,7 @@ class FirestoreService {
     final currentUserRef = users.doc(user.uid);
     final targetUserRef = users.doc(targetUserId);
 
-    final followingRef =
-        currentUserRef.collection('following').doc(targetUserId);
+    final followingRef = currentUserRef.collection('following').doc(targetUserId);
     final followerRef = targetUserRef.collection('followers').doc(user.uid);
 
     final followingDoc = await followingRef.get();
@@ -421,15 +542,8 @@ class FirestoreService {
       await followingRef.delete();
       await followerRef.delete();
     } else {
-      await followingRef.set({
-        'userId': targetUserId,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      await followerRef.set({
-        'userId': user.uid,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      // --- TAMBAHAN: Kirim notifikasi follow ---
+      await followingRef.set({'userId': targetUserId, 'timestamp': FieldValue.serverTimestamp()});
+      await followerRef.set({'userId': user.uid, 'timestamp': FieldValue.serverTimestamp()});
       await addNotification(
         targetUserId: targetUserId, 
         type: NotificationType.follow, 

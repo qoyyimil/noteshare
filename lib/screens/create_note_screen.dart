@@ -1,9 +1,11 @@
+// lib/screens/create_note_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Tambahkan ini
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CreateNoteScreen extends StatefulWidget {
   final String? docID;
@@ -38,22 +40,27 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   static const Color subtleTextColor = Color(0xFF6B7280);
   static const Color bgColor = Color(0xFFFFFFFF);
 
+  // --- State for Note Configuration ---
   bool _isPublic = true;
   final List<String> _categories = [
-    'General',
-    'Physics',
-    'Mathematics',
-    'Biology',
-    'Chemistry',
-    'History'
+    'General', 'Physics', 'Mathematics', 'Biology', 'Chemistry', 'History'
   ];
   String? _selectedCategory;
   bool get isEditing => widget.docID != null;
   bool _isPublishing = false;
 
+  // --- State for Premium Notes ---
+  bool _canPostPremium = false;
+  bool _isPremiumNote = false;
+  int? _selectedPrice = 10; // Default price
+  final List<int> _coinPrices = [10, 25, 50, 100]; // Available prices
+
   @override
   void initState() {
     super.initState();
+    
+    _checkEligibility(); // Check if the user can post premium notes
+    
     _searchController.addListener(() {
       setState(() {}); // Update UI when search text changes
     });
@@ -63,8 +70,20 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
       contentController.text = widget.initialContent ?? '';
       _selectedCategory = widget.initialCategory ?? _categories.first;
       _isPublic = widget.initialIsPublic ?? true;
+      // Note: You might want to fetch and set the initial premium status/price here if editing.
     } else {
       _selectedCategory = _categories.first;
+    }
+  }
+
+  void _checkEligibility() async {
+    if (_currentUser == null) return;
+    final userDoc = await firestoreService.users.doc(_currentUser!.uid).get();
+    if (mounted && userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        setState(() {
+            _canPostPremium = data['canPostPremium'] ?? false;
+        });
     }
   }
 
@@ -109,39 +128,44 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   }
 
   Future<void> _publishNote() async {
-    if (titleController.text.trim().isEmpty ||
-        contentController.text.trim().isEmpty ||
-        _selectedCategory == null) {
+    if (titleController.text.trim().isEmpty || contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('The title and content must not be empty..'),
-            backgroundColor: Colors.orange),
+        const SnackBar(content: Text('Title and content must not be empty.'), backgroundColor: Colors.orange),
       );
       return;
     }
 
-    setState(() {
-      _isPublishing = true;
-    });
+    if (_isPremiumNote && _selectedPrice == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a price for the premium note.'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    setState(() => _isPublishing = true);
 
     try {
       if (isEditing) {
-        await firestoreService.updateNote(widget.docID!, titleController.text,
-            contentController.text, _selectedCategory!, _isPublic);
+        await firestoreService.updateNote(
+          widget.docID!,
+          titleController.text,
+          contentController.text,
+          _selectedCategory!,
+          _isPublic,
+          isPremium: _isPremiumNote,
+          coinPrice: _selectedPrice ?? 0,
+        );
       } else {
-        // Ambil fullName dari Firestore users
         String fullName = '';
-        try {
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(_currentUser!.uid)
-              .get();
-          fullName = userDoc.data()?['fullName'] ?? _currentUser!.email ?? 'Anonymous';
-        } catch (e) {
-          fullName = _currentUser!.email ?? 'Anonymous';
+        if (_currentUser != null) {
+          try {
+            final userDoc = await FirebaseFirestore.instance.collection('users').doc(_currentUser!.uid).get();
+            fullName = userDoc.data()?['fullName'] ?? _currentUser!.email ?? 'Anonymous';
+          } catch (e) {
+            fullName = _currentUser!.email ?? 'Anonymous';
+          }
         }
 
-        // Pastikan FirestoreService.addNote menerima parameter tambahan jika perlu
         await firestoreService.addNote(
           titleController.text,
           contentController.text,
@@ -150,20 +174,20 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
           fullName: fullName,
           userId: _currentUser!.uid,
           userEmail: _currentUser!.email,
+          isPremium: _isPremiumNote,
+          coinPrice: _selectedPrice ?? 0,
         );
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text("Failed to save: ${e.toString()}"),
-            backgroundColor: Colors.red),
-      );
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to save: ${e.toString()}"), backgroundColor: Colors.red),
+        );
+      }
     } finally {
       if (mounted) {
-        setState(() {
-          _isPublishing = false;
-        });
+        setState(() => _isPublishing = false);
       }
     }
   }
@@ -184,72 +208,39 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isPublishing ? null : _publishNote,
         backgroundColor: _isPublishing ? Colors.grey : primaryBlue,
-        foregroundColor: Colors.white,
-        elevation: 6,
-        icon: _isPublishing
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : const Icon(Icons.send),
-        label: Text(
-          isEditing ? 'Update' : 'Publish',
-          style: GoogleFonts.lato(fontWeight: FontWeight.bold),
-        ),
+        icon: _isPublishing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.send, color: Colors.white),
+        label: Text(isEditing ? 'Update' : 'Publish', style: GoogleFonts.lato(fontWeight: FontWeight.bold, color: Colors.white)),
       ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 700),
           child: SingleChildScrollView(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildConfigurationSection(),
                 const SizedBox(height: 16),
-                // Title TextField
                 TextField(
                   controller: titleController,
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: 'Your Note Title',
-                    hintStyle: GoogleFonts.lora(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade400,
-                    ),
+                    hintStyle: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey.shade400),
                   ),
-                  style: GoogleFonts.lora(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
+                  style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: textColor),
                 ),
                 const SizedBox(height: 16),
-                // Content TextField
                 TextField(
                   controller: contentController,
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: 'Start writing your note here...',
-                    hintStyle: GoogleFonts.sourceSerif4(
-                      fontSize: 18,
-                      color: Colors.grey.shade400,
-                    ),
+                    hintStyle: GoogleFonts.sourceSerif4(fontSize: 18, color: Colors.grey.shade400),
                   ),
-                  style: GoogleFonts.sourceSerif4(
-                    fontSize: 18,
-                    height: 1.6,
-                    color: textColor,
-                  ),
+                  style: GoogleFonts.sourceSerif4(fontSize: 18, height: 1.6, color: textColor),
                   maxLines: null,
                 ),
-                // Add some bottom padding to prevent content being hidden behind FAB
                 const SizedBox(height: 100),
               ],
             ),
@@ -261,45 +252,67 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
 
   Widget _buildConfigurationSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade200)),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedCategory,
-                isExpanded: true,
-                items: _categories.map((String category) {
-                  return DropdownMenuItem<String>(
-                    value: category,
-                    child: Text(category, style: GoogleFonts.lato()),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedCategory = newValue;
-                  });
-                },
-                icon: const Icon(Icons.arrow_drop_down, color: subtleTextColor),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedCategory,
+                    isExpanded: true,
+                    items: _categories.map((String category) => DropdownMenuItem<String>(value: category, child: Text(category, style: GoogleFonts.lato()))).toList(),
+                    onChanged: (newValue) => setState(() => _selectedCategory = newValue),
+                    icon: const Icon(Icons.arrow_drop_down, color: subtleTextColor),
+                  ),
+                ),
               ),
+              const VerticalDivider(width: 20),
+              Text('Public', style: GoogleFonts.lato(color: subtleTextColor)),
+              const SizedBox(width: 8),
+              Switch(
+                value: _isPublic,
+                onChanged: (value) => setState(() => _isPublic = value),
+                activeColor: primaryBlue,
+              ),
+            ],
+          ),
+          if (_canPostPremium) ...[
+            const Divider(),
+            Row(
+              children: [
+                const SizedBox(width: 8),
+                const Icon(Icons.workspace_premium_outlined, color: Colors.amber),
+                const SizedBox(width: 8),
+                Text("Set as Premium Note", style: GoogleFonts.lato()),
+                const Spacer(),
+                Switch(
+                  value: _isPremiumNote,
+                  onChanged: (value) => setState(() => _isPremiumNote = value),
+                  activeColor: Colors.amber,
+                ),
+              ],
             ),
-          ),
-          const VerticalDivider(width: 20),
-          Text('Public', style: GoogleFonts.lato(color: subtleTextColor)),
-          const SizedBox(width: 8),
-          Switch(
-            value: _isPublic,
-            onChanged: (value) {
-              setState(() {
-                _isPublic = value;
-              });
-            },
-            activeColor: primaryBlue,
-          ),
+            if (_isPremiumNote)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: DropdownButtonFormField<int>(
+                  value: _selectedPrice,
+                  items: _coinPrices.map((price) => DropdownMenuItem<int>(value: price, child: Text("$price Coins"))).toList(),
+                  onChanged: (value) => setState(() => _selectedPrice = value),
+                  decoration: InputDecoration(
+                    labelText: "Note Price",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    isDense: true,
+                  ),
+                ),
+              )
+          ]
         ],
       ),
     );
