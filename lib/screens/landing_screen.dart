@@ -1,51 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:noteshare/screens/register_screen.dart';
-import 'package:noteshare/screens/login_screen.dart';
+import 'package:noteshare/auth/login_or_register.dart';
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
 
-  void _navigateToRegister(BuildContext context) {
+  void _navigateToAuth(BuildContext context, {required bool isInitialLogin}) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RegisterScreen(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => LoginScreen(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RegisterScreen(onTap: () {}),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  void _navigateToLogin(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LoginScreen(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => LoginScreen(onTap: () {}),
-              ),
-            );
-          },
-        ),
+        builder: (context) => LoginOrRegister(initialIsLogin: isInitialLogin),
       ),
     );
   }
@@ -53,7 +16,7 @@ class LandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 768;
-    final screenHeight = MediaQuery.of(context).size.height;
+    // final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: SafeArea(
@@ -72,17 +35,17 @@ class LandingScreen extends StatelessWidget {
                     Row(
                       children: [
                         TextButton(
-                          onPressed: () => _navigateToRegister(context), // Write
+                          onPressed: () => _navigateToAuth(context, isInitialLogin: false),
                           child: const Text('Write', style: TextStyle(color: Colors.black87, fontSize: 16)),
                         ),
                         const SizedBox(width: 20),
                         TextButton(
-                          onPressed: () => _navigateToLogin(context), // Sign in
+                          onPressed: () => _navigateToAuth(context, isInitialLogin: true),
                           child: const Text('Sign in', style: TextStyle(color: Colors.black87, fontSize: 16)),
                         ),
                         const SizedBox(width: 20),
                         ElevatedButton(
-                          onPressed: () => _navigateToRegister(context), // Get Started
+                          onPressed: () => _navigateToAuth(context, isInitialLogin: false),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blueAccent,
                             foregroundColor: Colors.white,
@@ -96,7 +59,7 @@ class LandingScreen extends StatelessWidget {
                   if (!isDesktop)
                     IconButton(
                       icon: const Icon(Icons.menu, color: Colors.black87),
-                      onPressed: () => _navigateToRegister(context),
+                      onPressed: () => _navigateToAuth(context, isInitialLogin: false),
                     ),
                 ],
               ),
@@ -114,22 +77,22 @@ class LandingScreen extends StatelessWidget {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: _buildLandingContent(context, isDesktop),
+                              children: _buildLandingContent(context),
                             ),
                           ),
                           const SizedBox(width: 40),
                           Expanded(
                             flex: 3,
-                            child: _buildLandingImage(isDesktop, screenHeight),
+                            child: _buildLandingImage(isDesktop),
                           ),
                         ],
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildLandingImage(isDesktop, screenHeight),
+                          _buildLandingImage(isDesktop),
                           const SizedBox(height: 20),
-                          ..._buildLandingContent(context, isDesktop),
+                          ..._buildLandingContent(context),
                         ],
                       ),
               ),
@@ -140,7 +103,8 @@ class LandingScreen extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildLandingContent(BuildContext context, bool isDesktop) {
+  List<Widget> _buildLandingContent(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 768;
     return [
       Text(
         'Write to share.\nShare to inspire.',
@@ -164,7 +128,7 @@ class LandingScreen extends StatelessWidget {
       ),
       const SizedBox(height: 30),
       ElevatedButton(
-        onPressed: () => _navigateToRegister(context), // Start Reading
+        onPressed: () => _navigateToAuth(context, isInitialLogin: false),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blueAccent,
           foregroundColor: Colors.white,
@@ -177,15 +141,11 @@ class LandingScreen extends StatelessWidget {
     ];
   }
 
-  Widget _buildLandingImage(bool isDesktop, double screenHeight) {
-    return isDesktop
-        ? Image.asset(
-            'assets/landing_page.png',
-            fit: BoxFit.contain,
-          )
-        : SizedBox(
-            height: screenHeight * 0.35,
-            child: Image.asset('assets/landing_page.png', fit: BoxFit.contain),
-          );
+  // Helper widget untuk gambar
+  Widget _buildLandingImage(bool isDesktop) {
+    return Image.asset(
+      'assets/landing_page.png',
+      fit: BoxFit.contain,
+    );
   }
 }

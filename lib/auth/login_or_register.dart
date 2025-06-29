@@ -3,14 +3,26 @@ import 'package:noteshare/screens/login_screen.dart';
 import 'package:noteshare/screens/register_screen.dart';
 
 class LoginOrRegister extends StatefulWidget {
-  const LoginOrRegister({super.key});
+  final bool initialIsLogin;
+
+  const LoginOrRegister({
+    super.key,
+    this.initialIsLogin = true, 
+  });
 
   @override
   _LoginOrRegisterState createState() => _LoginOrRegisterState();
 }
 
 class _LoginOrRegisterState extends State<LoginOrRegister> {
-  bool showLoginPage = true;
+  late bool showLoginPage;
+
+  @override
+  void initState() {
+    super.initState();
+    showLoginPage = widget.initialIsLogin;
+  }
+
 
   void togglePages() {
     setState(() {

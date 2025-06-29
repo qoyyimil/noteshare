@@ -164,20 +164,6 @@ class FirestoreService {
         message: "You have successfully purchased '$noteTitle'.",
       );
 
-      // Notifikasi untuk Penjual (jika akun premium)
-      final authorDoc = await transaction.get(users.doc(authorId));
-      if (authorDoc.exists && (authorDoc.data() as Map<String, dynamic>)['canPostPremium'] == true) {
-        await addNotification(
-          targetUserId: authorId,
-          type: NotificationType.purchase,
-          fromUserName: userData['fullName'] ?? 'A user', // Nama pembeli
-          noteId: noteId,
-          noteTitle: noteTitle,
-          message:
-              "Your note '$noteTitle' was purchased by ${userData['fullName'] ?? 'a user'}.",
-        );
-      }
-
       return "Purchase successful!";
     });
   }
