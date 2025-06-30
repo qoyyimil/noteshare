@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:intl/intl.dart';
 import 'package:noteshare/services/firestore_service.dart';
-import 'package:noteshare/widgets/delete_confirmation_dialog.dart'; // Import dialog konfirmasi hapus
+import 'package:noteshare/widgets/delete_confirmation_dialog.dart';
 
 class CommentSection extends StatefulWidget {
   final String noteId;
@@ -28,13 +28,39 @@ class _CommentSectionState extends State<CommentSection> {
   final TextEditingController _commentController = TextEditingController();
   final FocusNode _commentFocusNode = FocusNode();
 
-  // State untuk melacak balasan
   String? _replyingToCommentId;
-  String? _replyingToUserEmail;
+  String? _replyingToUserFullName;
+  String? _currentUserFullName;
+  bool _isLoadingFullName = false;
 
-  // -- Warna dari Desain (dari HomeScreen, agar konsisten) --
   static const Color primaryBlue = Color(0xFF3B82F6);
   static const Color subtleTextColor = Color(0xFF6B7280);
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentUserFullName();
+  }
+
+  Future<void> _fetchCurrentUserFullName() async {
+    if (widget.currentUser == null) return;
+    setState(() => _isLoadingFullName = true);
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.currentUser!.uid)
+          .get();
+      setState(() {
+        _currentUserFullName = doc.data()?['fullName'] ?? 'User';
+        _isLoadingFullName = false;
+      });
+    } catch (e) {
+      setState(() {
+        _currentUserFullName = 'User';
+        _isLoadingFullName = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -43,55 +69,58 @@ class _CommentSectionState extends State<CommentSection> {
     super.dispose();
   }
 
-  void _postComment() {
-    if (_commentController.text.trim().isEmpty || widget.currentUser == null)
-      return;
+  Future<void> _postComment() async {
+    if (_commentController.text.trim().isEmpty ||
+        widget.currentUser == null ||
+        _currentUserFullName == null ||
+        _isLoadingFullName) return;
 
-    widget.firestoreService.addComment(
-      noteId: widget.noteId,
-      text: _commentController.text,
-      userId: widget.currentUser!.uid,
-      userEmail: widget.currentUser!.email ?? 'Anonymous User',
-      // Kirim parentId jika sedang membalas
-      parentCommentId: _replyingToCommentId,
-    );
+    try {
+      await widget.firestoreService.addComment(
+        noteId: widget.noteId,
+        text: _commentController.text.trim(),
+        userId: widget.currentUser!.uid,
+        userFullName: _currentUserFullName!,
+        parentCommentId: _replyingToCommentId,
+      );
 
-    // Reset state setelah mengirim
-    _commentController.clear();
-    setState(() {
-      _replyingToCommentId = null;
-      _replyingToUserEmail = null;
-    });
-    FocusScope.of(context).unfocus();
+      _commentController.clear();
+      setState(() {
+        _replyingToCommentId = null;
+        _replyingToUserFullName = null;
+      });
+      FocusScope.of(context).unfocus();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to post comment: $e')),
+      );
+    }
   }
 
-  void _startReply(String commentId, String userEmail) {
+  void _startReply(String commentId, String userFullName) {
     setState(() {
       _replyingToCommentId = commentId;
-      _replyingToUserEmail = userEmail;
+      _replyingToUserFullName = userFullName;
     });
-    // Fokus ke input field
     _commentFocusNode.requestFocus();
   }
 
   void _cancelReply() {
     setState(() {
       _replyingToCommentId = null;
-      _replyingToUserEmail = null;
+      _replyingToUserFullName = null;
     });
     FocusScope.of(context).unfocus();
   }
 
-  // --- FUNGSI BARU: Menampilkan dialog konfirmasi hapus komentar ---
   void _showDeleteCommentDialog(String commentId) {
     showDialog(
       context: context,
       builder: (context) => DeleteConfirmationDialog(
         onDelete: () async {
           try {
-            Navigator.of(context).pop(); // Close dialog
-            await widget.firestoreService
-                .deleteComment(widget.noteId, commentId);
+            Navigator.of(context).pop();
+            await widget.firestoreService.deleteComment(widget.noteId, commentId);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Successfully deleted comment'),
@@ -111,14 +140,12 @@ class _CommentSectionState extends State<CommentSection> {
 
   @override
   Widget build(BuildContext context) {
-    // --- Proses data untuk memisahkan komentar dan balasan ---
     final topLevelComments = <QueryDocumentSnapshot>[];
     final replies = <String, List<QueryDocumentSnapshot>>{};
 
     for (var comment in widget.comments) {
       final data = comment.data() as Map<String, dynamic>;
       final parentId = data['parentCommentId'] as String?;
-
       if (parentId == null) {
         topLevelComments.add(comment);
       } else {
@@ -136,20 +163,18 @@ class _CommentSectionState extends State<CommentSection> {
         const SizedBox(height: 24),
         _buildCommentInputField(),
         const SizedBox(height: 32),
-        // Sort top-level comments by timestamp for consistent display
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: topLevelComments.length,
           itemBuilder: (context, index) {
             final comment = topLevelComments[index];
-            // Sort replies for each top-level comment
             final commentReplies = (replies[comment.id] ?? [])
               ..sort((a, b) {
                 final aData = a.data() as Map<String, dynamic>;
                 final bData = b.data() as Map<String, dynamic>;
-                final aTimestamp = (aData['timestamp'] as Timestamp).toDate();
-                final bTimestamp = (bData['timestamp'] as Timestamp).toDate();
+                final aTimestamp = (aData['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+                final bTimestamp = (bData['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
                 return aTimestamp.compareTo(bTimestamp);
               });
             return _buildCommentTree(comment, commentReplies);
@@ -160,9 +185,7 @@ class _CommentSectionState extends State<CommentSection> {
     );
   }
 
-  // Widget untuk menampilkan pohon komentar (induk + balasan)
-  Widget _buildCommentTree(
-      DocumentSnapshot comment, List<DocumentSnapshot> replies) {
+  Widget _buildCommentTree(DocumentSnapshot comment, List<DocumentSnapshot> replies) {
     return Column(
       children: [
         _buildCommentTile(comment),
@@ -173,8 +196,7 @@ class _CommentSectionState extends State<CommentSection> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: replies.length,
-              itemBuilder: (context, index) =>
-                  _buildCommentTile(replies[index]),
+              itemBuilder: (context, index) => _buildCommentTile(replies[index]),
               separatorBuilder: (context, index) => const SizedBox(height: 16),
             ),
           )
@@ -183,21 +205,19 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   Widget _buildCommentInputField() {
-    // Get current user's email first letter for their avatar
-    final String currentUserEmail = widget.currentUser?.email ?? 'U';
-    final String firstLetter =
-        currentUserEmail.isNotEmpty ? currentUserEmail[0].toUpperCase() : 'U';
+    final String displayFullName = _currentUserFullName ?? '';
+    final String firstLetter = displayFullName.isNotEmpty
+        ? displayFullName[0].toUpperCase()
+        : 'U';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CircleAvatar(
-          backgroundColor: primaryBlue, // Use primaryBlue for consistency
+          backgroundColor: primaryBlue,
           child: Text(
             firstLetter,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16), // Adjust font size as needed
+            style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
         ),
         const SizedBox(width: 16),
@@ -205,10 +225,9 @@ class _CommentSectionState extends State<CommentSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Menampilkan chip jika sedang membalas ---
               if (_replyingToCommentId != null)
                 Chip(
-                  label: Text('Replying to @${_replyingToUserEmail ?? ''}'),
+                  label: Text('Replying to ${_replyingToUserFullName ?? ''}'),
                   onDeleted: _cancelReply,
                   backgroundColor: Colors.blue.shade50,
                   deleteIconColor: Colors.blue.shade700,
@@ -217,18 +236,23 @@ class _CommentSectionState extends State<CommentSection> {
                 focusNode: _commentFocusNode,
                 controller: _commentController,
                 maxLines: null,
+                enabled: !_isLoadingFullName,
                 decoration: InputDecoration(
-                  hintText: 'Write a comment...',
+                  hintText: _isLoadingFullName ? 'Loading...' : 'Write a comment...',
                   border: InputBorder.none,
                 ),
+                onChanged: (_) => setState(() {}), // agar tombol Send update state
               ),
               const Divider(),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: _postComment,
-                  child: Text('Send',
-                      style: GoogleFonts.lato(color: primaryBlue)),
+                  onPressed: (!_isLoadingFullName &&
+                          _commentController.text.trim().isNotEmpty &&
+                          _currentUserFullName != null)
+                      ? _postComment
+                      : null,
+                  child: Text('Send', style: GoogleFonts.lato(color: primaryBlue)),
                 ),
               )
             ],
@@ -240,19 +264,14 @@ class _CommentSectionState extends State<CommentSection> {
 
   Widget _buildCommentTile(DocumentSnapshot comment) {
     final data = comment.data() as Map<String, dynamic>;
-    final String userEmail = data['userEmail'] ?? 'Anonymous User';
-    final String firstLetter = userEmail.isNotEmpty
-        ? userEmail[0].toUpperCase()
-        : 'P'; // Default to 'P' for Pengguna
-    final String commentUserId =
-        data['userId'] ?? ''; // ID pengguna yang membuat komentar
-    final bool isMyComment = widget.currentUser?.uid ==
-        commentUserId; // Cek apakah komentar ini milik pengguna saat ini
+    final String userFullName = data['fullName'] ?? 'Anonymous User';
+    final String firstLetter =
+        userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
+    final String commentUserId = data['userId'] ?? '';
+    final bool isMyComment = widget.currentUser?.uid == commentUserId;
 
-    // Get timestamp for comment
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-    // Format timestamp relative to now
-    String formattedTime = 'Seconds ago'; // Default value
+    String formattedTime = 'Seconds ago';
     if (timestamp != null) {
       final Duration diff = DateTime.now().difference(timestamp);
       if (diff.inSeconds < 60) {
@@ -261,80 +280,82 @@ class _CommentSectionState extends State<CommentSection> {
         formattedTime = '${diff.inMinutes} minutes ago';
       } else if (diff.inHours < 24) {
         formattedTime = '${diff.inHours} hours ago';
-      } else if (diff.inDays < 7) {
-        formattedTime = '${diff.inDays} days ago';
       } else {
-        formattedTime = DateFormat('d MMM yyyy', 'id_ID')
-            .format(timestamp); // Fallback for older comments
+        formattedTime = DateFormat('yyyy-MM-dd HH:mm').format(timestamp);
       }
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CircleAvatar(
-          backgroundColor: primaryBlue, // Use primaryBlue for consistency
-          child: Text(
-            firstLetter,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16), // Adjust font size as needed
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: primaryBlue,
+            child: Text(
+              firstLetter,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    userEmail,
-                    style: GoogleFonts.lato(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 8),
-                  Text('• $formattedTime',
-                      style: GoogleFonts.lato(color: subtleTextColor)),
-                  const Spacer(), // Tambahkan Spacer
-                  // --- Menu Opsi Komentar (Hanya Tampil Jika Komentar Milik Pengguna) ---
-                  if (isMyComment)
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_horiz,
-                          color: subtleTextColor, size: 20),
-                      onSelected: (value) {
-                        if (value == 'delete_comment') {
-                          _showDeleteCommentDialog(comment.id);
-                        }
-                        // Tambahkan opsi lain di sini jika diperlukan
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        const PopupMenuItem<String>(
-                          value: 'delete_comment',
-                          child: Text('Delete Comment',
-                              style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      userFullName,
+                      style: GoogleFonts.lato(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87),
                     ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                data['text'] ?? '',
-                style: GoogleFonts.lato(fontSize: 15, height: 1.5),
-              ),
-              const SizedBox(height: 8),
-              // --- Tombol Balas ---
-              TextButton.icon(
-                icon: const Icon(Icons.reply_outlined, size: 18),
-                label: const Text('Reply'),
-                style: TextButton.styleFrom(
-                    foregroundColor: subtleTextColor, padding: EdgeInsets.zero),
-                onPressed: () => _startReply(comment.id, userEmail),
-              ),
-            ],
+                    const SizedBox(width: 8),
+                    Text('• $formattedTime',
+                        style: GoogleFonts.lato(color: subtleTextColor)),
+                    const Spacer(),
+                    if (isMyComment)
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_horiz,
+                            color: subtleTextColor, size: 20),
+                        onSelected: (value) {
+                          if (value == 'delete_comment') {
+                            _showDeleteCommentDialog(comment.id);
+                          }
+                        },
+                        itemBuilder: (BuildContext context) => [
+                          const PopupMenuItem<String>(
+                            value: 'delete_comment',
+                            child: Text('Delete Comment',
+                                style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  data['text'] ?? '',
+                  style: GoogleFonts.lato(fontSize: 15, height: 1.5),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => _startReply(comment.id, userFullName),
+                  child: Text(
+                    'Reply',
+                    style: GoogleFonts.lato(
+                      color: primaryBlue,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

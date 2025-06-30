@@ -33,7 +33,7 @@ class FirestoreService {
   }) async {
     final userRef = users.doc(userId);
     final userSnapshot = await userRef.get();
-    
+
     if (!userSnapshot.exists) {
       throw Exception("User not found.");
     }
@@ -59,7 +59,8 @@ class FirestoreService {
         'amount': amount,
         'method': method,
         'accountDetails': accountNumber,
-        'status': 'Pending', // In a real app, this would be processed by an admin
+        'status':
+            'Pending', // In a real app, this would be processed by an admin
         'timestamp': FieldValue.serverTimestamp(),
       });
     });
@@ -82,7 +83,7 @@ class FirestoreService {
         .orderBy('timestamp', descending: true)
         .snapshots();
   }
-  
+
   // ===============================================================
   // --- EXISTING FUNCTIONS (Unchanged or Modified) ---
   // ===============================================================
@@ -133,8 +134,9 @@ class FirestoreService {
       transaction.update(userRef, {'coins': FieldValue.increment(-notePrice)});
 
       // 2. Add the buyer's UID to the note's purchasedBy list
-      transaction.update(
-          noteRef, {'purchasedBy': FieldValue.arrayUnion([userId])});
+      transaction.update(noteRef, {
+        'purchasedBy': FieldValue.arrayUnion([userId])
+      });
 
       // 3. Give a share of the coins to the author and log the earning
       final int authorShare = (notePrice * 0.8).toInt();
@@ -173,7 +175,8 @@ class FirestoreService {
     const int requiredFollowers = 50;
     const int requiredLikes = 100;
 
-    final followersSnapshot = await users.doc(userId).collection('followers').get();
+    final followersSnapshot =
+        await users.doc(userId).collection('followers').get();
     if (followersSnapshot.docs.length < requiredFollowers) return false;
 
     final notesSnapshot = await notes.where('ownerId', isEqualTo: userId).get();
@@ -220,7 +223,7 @@ class FirestoreService {
         .orderBy('timestamp', descending: true)
         .snapshots();
   }
-  
+
   Stream<int> getUnreadNotificationsCountStream() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(0);
@@ -235,7 +238,7 @@ class FirestoreService {
   Future<void> markAllNotificationsAsRead() async {
     final user = _auth.currentUser;
     if (user == null) return;
-    
+
     final unreadNotifs = await users
         .doc(user.uid)
         .collection('notifications')
@@ -278,7 +281,7 @@ class FirestoreService {
       'timestamp': Timestamp.now(),
       'ownerId': userId,
       'userEmail': userEmail,
-      'fullName': fullName, 
+      'fullName': fullName,
       'allowed_users': [userId],
       'bookmarkCount': 0,
       'likes': [],
@@ -290,7 +293,8 @@ class FirestoreService {
   }
 
   Future<void> updateNote(String docID, String newTitle, String newContent,
-      String newCategory, bool newIsPublic, {bool isPremium = false, int coinPrice = 0}) {
+      String newCategory, bool newIsPublic,
+      {bool isPremium = false, int coinPrice = 0}) {
     return notes.doc(docID).update({
       'title': newTitle,
       'content': newContent,
@@ -365,34 +369,41 @@ class FirestoreService {
   }
 
   Stream<Map<String, dynamic>> getNotesAndStatsForUser(String userId) {
-    return notes.where('ownerId', isEqualTo: userId)
-      .orderBy('timestamp', descending: true)
-      .snapshots()
-      .map((snapshot) {
-        if (snapshot.docs.isEmpty) {
-          return {'totalLikes': 0, 'totalReads': 0, 'dailyStats': <DateTime, Map<String, int>>{}};
-        }
-        int totalLikes = 0;
-        int totalReads = 0;
-        Map<DateTime, Map<String, int>> dailyStats = {};
-        for (var doc in snapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          totalLikes += (data['likes'] as List?)?.length ?? 0;
-          totalReads += (data['readCount'] as int?) ?? 0;
-          final timestamp = (data['timestamp'] as Timestamp).toDate();
-          final dayKey = DateTime(timestamp.year, timestamp.month, timestamp.day);
-          if (!dailyStats.containsKey(dayKey)) {
-            dailyStats[dayKey] = {'likes': 0, 'reads': 0};
-          }
-          dailyStats[dayKey]!['likes'] = (dailyStats[dayKey]!['likes'] ?? 0) + ((data['likes'] as List?)?.length ?? 0);
-          dailyStats[dayKey]!['reads'] = (dailyStats[dayKey]!['reads'] ?? 0) + ((data['readCount'] as int?) ?? 0);
-        }
+    return notes
+        .where('ownerId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isEmpty) {
         return {
-          'totalLikes': totalLikes,
-          'totalReads': totalReads,
-          'dailyStats': dailyStats,
+          'totalLikes': 0,
+          'totalReads': 0,
+          'dailyStats': <DateTime, Map<String, int>>{}
         };
-      });
+      }
+      int totalLikes = 0;
+      int totalReads = 0;
+      Map<DateTime, Map<String, int>> dailyStats = {};
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        totalLikes += (data['likes'] as List?)?.length ?? 0;
+        totalReads += (data['readCount'] as int?) ?? 0;
+        final timestamp = (data['timestamp'] as Timestamp).toDate();
+        final dayKey = DateTime(timestamp.year, timestamp.month, timestamp.day);
+        if (!dailyStats.containsKey(dayKey)) {
+          dailyStats[dayKey] = {'likes': 0, 'reads': 0};
+        }
+        dailyStats[dayKey]!['likes'] = (dailyStats[dayKey]!['likes'] ?? 0) +
+            ((data['likes'] as List?)?.length ?? 0);
+        dailyStats[dayKey]!['reads'] = (dailyStats[dayKey]!['reads'] ?? 0) +
+            ((data['readCount'] as int?) ?? 0);
+      }
+      return {
+        'totalLikes': totalLikes,
+        'totalReads': totalReads,
+        'dailyStats': dailyStats,
+      };
+    });
   }
 
   Future<void> deleteNote(String docID) {
@@ -402,23 +413,28 @@ class FirestoreService {
   Future<void> toggleLike(String noteId, String userId, bool isLiked) async {
     final noteRef = notes.doc(noteId);
     if (isLiked) {
-      await noteRef.update({'likes': FieldValue.arrayRemove([userId])});
+      await noteRef.update({
+        'likes': FieldValue.arrayRemove([userId])
+      });
     } else {
-      await noteRef.update({'likes': FieldValue.arrayUnion([userId])});
+      await noteRef.update({
+        'likes': FieldValue.arrayUnion([userId])
+      });
       final noteDoc = await noteRef.get();
       if (noteDoc.exists) {
         final noteData = noteDoc.data() as Map<String, dynamic>;
         await addNotification(
-          targetUserId: noteData['ownerId'], 
-          type: NotificationType.like, 
-          fromUserName: _auth.currentUser?.displayName ?? _auth.currentUser?.email ?? "Someone", 
-          noteId: noteId,
-          noteTitle: noteData['title']
-        );
+            targetUserId: noteData['ownerId'],
+            type: NotificationType.like,
+            fromUserName: _auth.currentUser?.displayName ??
+                _auth.currentUser?.email ??
+                "Someone",
+            noteId: noteId,
+            noteTitle: noteData['title']);
       }
     }
   }
-  
+
   Stream<QuerySnapshot> getCommentsStream(String noteId) {
     return notes
         .doc(noteId)
@@ -428,33 +444,25 @@ class FirestoreService {
   }
 
   Future<void> addComment({
-    required String noteId,
-    required String text,
-    required String userId,
-    required String userEmail,
-    String? parentCommentId,
-  }) async { 
-    await notes.doc(noteId).collection('comments').add({
-      'text': text,
-      'userId': userId,
-      'userEmail': userEmail,
-      'timestamp': Timestamp.now(),
-      'parentCommentId': parentCommentId,
-      'likes': [],
-    });
-    final noteDoc = await notes.doc(noteId).get();
-    if (noteDoc.exists) {
-      final noteData = noteDoc.data() as Map<String, dynamic>;
-      await addNotification(
-        targetUserId: noteData['ownerId'], 
-        type: NotificationType.comment, 
-        fromUserName: userEmail,
-        noteId: noteId,
-        noteTitle: noteData['title']
-      );
-    }
-  }
-
+  required String noteId,
+  required String text,
+  required String userId,
+  required String userFullName,
+  String? parentCommentId,
+}) async {
+  await FirebaseFirestore.instance
+      .collection('notes')
+      .doc(noteId)
+      .collection('comments')
+      .add({
+    'noteId': noteId,
+    'text': text,
+    'userId': userId,
+    'fullName': userFullName, // PASTIKAN INI SESUAI!
+    'timestamp': FieldValue.serverTimestamp(),
+    'parentCommentId': parentCommentId,
+  });
+}
   Future<void> deleteComment(String noteId, String commentId) async {
     try {
       await notes.doc(noteId).collection('comments').doc(commentId).delete();
@@ -490,16 +498,19 @@ class FirestoreService {
     final noteRef = notes.doc(noteId);
 
     await _firestore.runTransaction((transaction) async {
-      DocumentSnapshot userBookmarkSnapshot = await transaction.get(userBookmarkRef);
+      DocumentSnapshot userBookmarkSnapshot =
+          await transaction.get(userBookmarkRef);
       DocumentSnapshot noteSnapshot = await transaction.get(noteRef);
 
       if (!noteSnapshot.exists) throw Exception("Note does not exist!");
 
       if (userBookmarkSnapshot.exists) {
         transaction.delete(userBookmarkRef);
-        transaction.update(noteRef, {'bookmarkCount': FieldValue.increment(-1)});
+        transaction
+            .update(noteRef, {'bookmarkCount': FieldValue.increment(-1)});
       } else {
-        transaction.set(userBookmarkRef, {'timestamp': FieldValue.serverTimestamp()});
+        transaction
+            .set(userBookmarkRef, {'timestamp': FieldValue.serverTimestamp()});
         transaction.update(noteRef, {'bookmarkCount': FieldValue.increment(1)});
       }
     });
@@ -559,7 +570,8 @@ class FirestoreService {
     final currentUserRef = users.doc(user.uid);
     final targetUserRef = users.doc(targetUserId);
 
-    final followingRef = currentUserRef.collection('following').doc(targetUserId);
+    final followingRef =
+        currentUserRef.collection('following').doc(targetUserId);
     final followerRef = targetUserRef.collection('followers').doc(user.uid);
 
     final followingDoc = await followingRef.get();
@@ -568,13 +580,14 @@ class FirestoreService {
       await followingRef.delete();
       await followerRef.delete();
     } else {
-      await followingRef.set({'userId': targetUserId, 'timestamp': FieldValue.serverTimestamp()});
-      await followerRef.set({'userId': user.uid, 'timestamp': FieldValue.serverTimestamp()});
+      await followingRef.set(
+          {'userId': targetUserId, 'timestamp': FieldValue.serverTimestamp()});
+      await followerRef
+          .set({'userId': user.uid, 'timestamp': FieldValue.serverTimestamp()});
       await addNotification(
-        targetUserId: targetUserId, 
-        type: NotificationType.follow, 
-        fromUserName: user.displayName ?? user.email ?? "Someone"
-      );
+          targetUserId: targetUserId,
+          type: NotificationType.follow,
+          fromUserName: user.displayName ?? user.email ?? "Someone");
     }
   }
 
