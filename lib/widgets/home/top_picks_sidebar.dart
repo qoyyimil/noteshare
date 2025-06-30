@@ -76,7 +76,7 @@ class TopPicksSidebar extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  data['userEmail'] ?? 'User',
+                  data['fullName'] ?? 'User',
                   style: GoogleFonts.lato(fontSize: 14, color: subtleTextColor),
                 ),
               ],
