@@ -105,7 +105,6 @@ class SearchResultsView extends StatelessWidget {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final searchProvider = Provider.of<SearchProvider>(context);
@@ -130,10 +129,18 @@ class SearchResultsView extends StatelessWidget {
             const Divider(height: 1, color: Color(0xFFE5E7EB)),
             Expanded(
               child: searchProvider.activeTab == 'Note'
-                  ? _buildSearchNotesList(searchProvider.searchQuery,
-                      FirestoreService(), primaryBlue, textColor, subtleTextColor)
-                  : _buildSearchPeopleList(searchProvider.searchQuery,
-                      FirestoreService(), primaryBlue, textColor, subtleTextColor),
+                  ? _buildSearchNotesList(
+                      searchProvider.searchQuery,
+                      FirestoreService(),
+                      primaryBlue,
+                      textColor,
+                      subtleTextColor)
+                  : _buildSearchPeopleList(
+                      searchProvider.searchQuery,
+                      FirestoreService(),
+                      primaryBlue,
+                      textColor,
+                      subtleTextColor),
             ),
           ],
         ),
@@ -188,7 +195,12 @@ class SearchResultsView extends StatelessWidget {
                 onTap: () {
                   Provider.of<SearchProvider>(context, listen: false)
                       .clearSearch();
-                  _handleNoteTap(context, noteData, noteDoc.id);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            NoteDetailScreen(noteId: noteDoc.id)),
+                  );
                 },
               );
             },

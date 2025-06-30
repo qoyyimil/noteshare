@@ -31,87 +31,6 @@ class NoteCard extends StatelessWidget {
     this.showBottomBorder = true, 
   });
 
-  void _handleNoteTap(BuildContext context) {
-    final bool isPremium = data['isPremium'] ?? false;
-    final User? currentUser = FirebaseAuth.instance.currentUser;
-    final String currentUserId = currentUser?.uid ?? '';
-    final List purchasedBy = data['purchasedBy'] ?? [];
-    final bool hasPurchased = purchasedBy.contains(currentUserId);
-    final bool isOwner = data['ownerId'] == currentUserId;
-
-    if (!isPremium || isOwner || hasPurchased) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => NoteDetailScreen(noteId: docId)),
-      );
-    } else {
-      _showPurchaseConfirmationDialog(context);
-    }
-  }
-
-  void _showPurchaseConfirmationDialog(BuildContext context) {
-    final int price = data['coinPrice'] ?? 0;
-    final User? currentUser = FirebaseAuth.instance.currentUser;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Text("Unlock Premium Note"),
-        content: Text("Do you want to spend $price coins to unlock this note?"),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.of(dialogContext).pop(),
-          ),
-          ElevatedButton(
-            child: const Text("Unlock"),
-            onPressed: () async {
-              if (currentUser == null) return;
-              
-              Navigator.of(dialogContext).pop(); 
-              
-              final result = await firestoreService.purchaseNote(currentUser.uid, docId);
-
-              if (result == "Purchase successful!") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => NoteDetailScreen(noteId: docId)),
-                );
-              } else if (result == "Not enough coins!") {
-                 showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text("Insufficient Coins"),
-                      content: const Text("You don't have enough coins. Would you like to top up?"),
-                      actions: [
-                        TextButton(
-                          child: const Text("Cancel"),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                        ElevatedButton(
-                          child: const Text("Top Up Now"),
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const MyCoinsScreen()));
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result), backgroundColor: Colors.red)
-                );
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-
   @override
   Widget build(BuildContext context) {
     final likesCount = (data['likes'] as List<dynamic>? ?? []).length;
@@ -122,7 +41,12 @@ class NoteCard extends StatelessWidget {
     final bool isPremium = data['isPremium'] ?? false;
 
     return InkWell(
-      onTap: onTap ?? () => _handleNoteTap(context),
+      onTap: onTap ??
+          () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => NoteDetailScreen(noteId: docId)),
+              ),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24.0),
         decoration: BoxDecoration(
