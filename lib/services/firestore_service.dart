@@ -337,6 +337,19 @@ class FirestoreService {
     return notes.doc(docID).delete();
   }
 
+  Stream<bool> isNoteLikedByCurrentUser(String noteId) {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(false);
+
+    return notes.doc(noteId).snapshots().map((snapshot) {
+      if (!snapshot.exists) return false;
+      final data = snapshot.data() as Map<String, dynamic>?;
+      if (data == null) return false;
+      final likes = data['likes'] as List<dynamic>? ?? [];
+      return likes.contains(user.uid);
+    });
+  }
+
   Future<void> toggleLike(String noteId, String userId, bool isLiked) async {
     final noteRef = notes.doc(noteId);
     if (isLiked) {
@@ -390,8 +403,8 @@ class FirestoreService {
     if (noteDoc.exists) {
       final noteData = noteDoc.data() as Map<String, dynamic>;
       final userDoc = await users.doc(userId).get();
-        final userData = userDoc.data() as Map<String, dynamic>?;
-        final userFullName = userData?['fullName'] ?? "Someone";
+      final userData = userDoc.data() as Map<String, dynamic>?;
+      final userFullName = userData?['fullName'] ?? "Someone";
       await addNotification(
           targetUserId: noteData['ownerId'],
           type: NotificationType.comment,

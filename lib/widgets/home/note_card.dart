@@ -28,16 +28,22 @@ class NoteCard extends StatelessWidget {
     required this.subtleTextColor,
     this.onTap,
     this.isBookmarked = false,
-    this.showBottomBorder = true, 
+    this.showBottomBorder = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final likesCount = (data['likes'] as List<dynamic>? ?? []).length;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final likesList = data['likes'] as List<dynamic>? ?? [];
+    final likesCount = likesList.length;
+    final bool isLikedByMe =
+        currentUser != null && likesList.contains(currentUser.uid);
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-    final formattedDate = timestamp != null ? DateFormat('d MMM', 'en_US').format(timestamp) : '';
+    final formattedDate =
+        timestamp != null ? DateFormat('d MMM', 'en_US').format(timestamp) : '';
     final String userFullName = data['fullName'] ?? 'User';
-    final String firstLetter = userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
+    final String firstLetter =
+        userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
     final bool isPremium = data['isPremium'] ?? false;
 
     return InkWell(
@@ -68,46 +74,65 @@ class NoteCard extends StatelessWidget {
                         backgroundColor: primaryBlue,
                         child: Text(
                           firstLetter,
-                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 10),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(userFullName, style: GoogleFonts.lato(fontSize: 18, color: textColor)),
+                      Text(userFullName,
+                          style:
+                              GoogleFonts.lato(fontSize: 18, color: textColor)),
                       if (isPremium)
                         Padding(
                           padding: const EdgeInsets.only(left: 8.0),
-                          child: Icon(Icons.workspace_premium, color: Colors.amber.shade700, size: 18),
+                          child: Icon(Icons.workspace_premium,
+                              color: Colors.amber.shade700, size: 18),
                         ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     data['title'] ?? 'Untitled',
-                    style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
+                    style: GoogleFonts.lora(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: textColor),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     data['content'] ?? 'No content',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.lato(fontSize: 16, color: subtleTextColor, height: 1.5),
+                    style: GoogleFonts.lato(
+                        fontSize: 16, color: subtleTextColor, height: 1.5),
                   ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Text(formattedDate, style: GoogleFonts.lato(fontSize: 13, color: subtleTextColor)),
+                      Text(formattedDate,
+                          style: GoogleFonts.lato(
+                              fontSize: 13, color: subtleTextColor)),
                       const SizedBox(width: 16),
-                      Icon(Icons.favorite_border, size: 16, color: subtleTextColor),
+                      Icon(
+                        isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                        color: isLikedByMe ? Colors.redAccent : subtleTextColor,
+                        size: 18,
+                      ),
                       const SizedBox(width: 4),
-                      Text('$likesCount', style: GoogleFonts.lato(fontSize: 13, color: subtleTextColor)),
+                      Text('$likesCount',
+                          style: GoogleFonts.lato(
+                              fontSize: 13, color: subtleTextColor)),
                       const SizedBox(width: 16),
-                      Icon(Icons.chat_bubble_outline, size: 16, color: subtleTextColor),
+                      Icon(Icons.chat_bubble_outline,
+                          size: 16, color: subtleTextColor),
                       const SizedBox(width: 4),
                       StreamBuilder<QuerySnapshot>(
                         stream: firestoreService.getCommentsStream(docId),
                         builder: (context, commentSnapshot) {
                           final count = commentSnapshot.data?.docs.length ?? 0;
-                          return Text(count.toString(), style: GoogleFonts.lato(fontSize: 13, color: subtleTextColor));
+                          return Text(count.toString(),
+                              style: GoogleFonts.lato(
+                                  fontSize: 13, color: subtleTextColor));
                         },
                       ),
                       const Spacer(),
@@ -118,11 +143,16 @@ class NoteCard extends StatelessWidget {
                           stream: firestoreService.isNoteBookmarked(docId),
                           builder: (context, snapshot) {
                             final isBookmarkedByStream = snapshot.data ?? false;
-                            final bool displayAsBookmarked = isBookmarked || isBookmarkedByStream;
+                            final bool displayAsBookmarked =
+                                isBookmarked || isBookmarkedByStream;
 
                             return Icon(
-                              displayAsBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                              color: displayAsBookmarked ? primaryBlue : subtleTextColor,
+                              displayAsBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              color: displayAsBookmarked
+                                  ? primaryBlue
+                                  : subtleTextColor,
                             );
                           },
                         ),
@@ -144,7 +174,8 @@ class NoteCard extends StatelessWidget {
                     width: 120,
                     height: 120,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(width: 120, height: 120, color: Colors.grey[200]),
+                    errorBuilder: (context, error, stackTrace) => Container(
+                        width: 120, height: 120, color: Colors.grey[200]),
                   ),
                 ),
               ),

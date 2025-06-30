@@ -253,7 +253,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
-  // --- WIDGET YANG DIPERBAIKI ---
   Widget _buildLockedContent(BuildContext context, Map<String, dynamic> data) {
     final int price = data['coinPrice'] ?? 0;
 
@@ -471,13 +470,28 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
     return Row(
       children: [
-        _actionButton(isLikedByMe ? Icons.favorite : Icons.favorite_border,
-            '$likeCount', isLikedByMe ? Colors.redAccent : subtleTextColor, () {
-          if (_currentUser != null) {
-            _firestoreService.toggleLike(
-                widget.noteId, _currentUser!.uid, isLikedByMe);
-          }
-        }),
+        InkWell(
+          onTap: () {
+            if (_currentUser != null) {
+              _firestoreService.toggleLike(
+                  widget.noteId, _currentUser!.uid, isLikedByMe);
+            }
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Row(
+            children: [
+              Icon(
+                isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                color: isLikedByMe ? Colors.redAccent : subtleTextColor,
+                size: 22,
+              ),
+              const SizedBox(width: 6),
+              Text('$likeCount',
+                  style: GoogleFonts.lato(
+                      color: subtleTextColor, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
         const SizedBox(width: 24),
         StreamBuilder<QuerySnapshot>(
             stream: _firestoreService.getCommentsStream(widget.noteId),
