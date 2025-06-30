@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:noteshare/widgets/search_results_view.dart';
 import 'package:noteshare/widgets/success_dialog.dart';
 import 'package:provider/provider.dart';
@@ -28,7 +29,13 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   final _amountController = TextEditingController();
   final _accountNumberController = TextEditingController();
   String? _selectedMethod;
-  final List<String> _withdrawalMethods = ['BCA', 'Mandiri', 'GoPay', 'OVO', 'DANA'];
+  final List<String> _withdrawalMethods = [
+    'BCA',
+    'Mandiri',
+    'GoPay',
+    'OVO',
+    'DANA'
+  ];
 
   bool _isWithdrawing = false;
   final _formKey = GlobalKey<FormState>();
@@ -52,7 +59,7 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   Future<void> _handleWithdrawal() async {
     if (_currentUser == null) return;
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isWithdrawing = true);
 
     try {
@@ -68,7 +75,8 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
             context: context,
             builder: (ctx) => SuccessDialog(
                   title: "Withdrawal Requested",
-                  description: "Your request for $amount coins has been submitted and is now pending review.",
+                  description:
+                      "Your request for $amount coins has been submitted and is now pending review.",
                   buttonText: "Got it!",
                   onOkPressed: () => Navigator.of(ctx).pop(),
                 ));
@@ -81,7 +89,9 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text("Error: ${e.toString()}"),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -94,23 +104,19 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   @override
   Widget build(BuildContext context) {
     const Color primaryBlue = Color(0xFF3B82F6);
+    const Color subtleTextColor = Color(0xFF6B7280);
+    const Color sidebarBgColor = Color(0xFFF9FAFB);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text("Creator Earnings", style: GoogleFonts.lato()),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: primaryBlue,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: primaryBlue,
-          tabs: const [
-            Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: "Withdraw"),
-            Tab(icon: Icon(Icons.history), text: "History"),
-          ],
-        ),
+      appBar: HomeAppBar(
+        searchController: _searchController,
+        searchKeyword: context.read<SearchProvider>().searchQuery,
+        onClearSearch: () => context.read<SearchProvider>().clearSearch(),
+        currentUser: _currentUser,
+        primaryBlue: primaryBlue,
+        subtleTextColor: subtleTextColor,
+        sidebarBgColor: sidebarBgColor,
       ),
       body: Consumer<SearchProvider>(
         builder: (context, searchProvider, child) {
@@ -119,11 +125,32 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
           }
           return child!;
         },
-        child: TabBarView(
-          controller: _tabController,
+        child: Column(
           children: [
-            _buildWithdrawTab(),
-            _buildHistoryTab(),
+            Container(
+              color: Colors.white,
+              child: TabBar(
+                controller: _tabController,
+                labelColor: primaryBlue,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: primaryBlue,
+                tabs: const [
+                  Tab(
+                      icon: Icon(Icons.account_balance_wallet_outlined),
+                      text: "Withdraw"),
+                  Tab(icon: Icon(Icons.history), text: "History"),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildWithdrawTab(),
+                  _buildHistoryTab(),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -131,8 +158,9 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   }
 
   // --- UI WIDGET TELAH DIPERBAIKI DI SINI ---
-    Widget _buildWithdrawTab() {
-    if (_currentUser == null) return const Center(child: Text("Please log in."));
+  Widget _buildWithdrawTab() {
+    if (_currentUser == null)
+      return const Center(child: Text("Please log in."));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -148,7 +176,9 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final coins = (snapshot.data!.data() as Map<String, dynamic>)['coins'] ?? 0;
+                final coins =
+                    (snapshot.data!.data() as Map<String, dynamic>)['coins'] ??
+                        0;
                 return Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -165,9 +195,12 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 40),
+                          Icon(Icons.monetization_on,
+                              color: Colors.amber.shade700, size: 40),
                           const SizedBox(width: 8),
-                          Text(NumberFormat.decimalPattern('id_ID').format(coins),
+                          Text(
+                              NumberFormat.decimalPattern('id_ID')
+                                  .format(coins),
                               style: GoogleFonts.lato(
                                   fontSize: 42,
                                   fontWeight: FontWeight.bold,
@@ -183,9 +216,10 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
 
             // Withdrawal Form
             Text("Withdrawal Details",
-                style: GoogleFonts.lato(fontSize: 20, fontWeight: FontWeight.bold)),
+                style: GoogleFonts.lato(
+                    fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            
+
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -210,7 +244,8 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
                 validator: (value) =>
                     value == null ? 'Please select a method' : null,
                 // --- PERBAIKAN DI SINI ---
-                dropdownColor: Colors.white, // Menetapkan warna background menu saat dibuka
+                dropdownColor: Colors
+                    .white, // Menetapkan warna background menu saat dibuka
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -218,7 +253,8 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 ),
               ),
             ),
@@ -226,10 +262,11 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
             TextFormField(
               controller: _accountNumberController,
               decoration: InputDecoration(
-                  labelText: "Account / E-Wallet Number",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
+                labelText: "Account / E-Wallet Number",
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.grey.shade50,
               ),
               keyboardType: TextInputType.number,
               validator: (value) => value == null || value.isEmpty
@@ -240,14 +277,16 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
             TextFormField(
               controller: _amountController,
               decoration: InputDecoration(
-                  labelText: "Amount of Coins to Withdraw",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
+                labelText: "Amount of Coins to Withdraw",
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.grey.shade50,
               ),
               keyboardType: TextInputType.number,
               validator: (value) {
-                if (value == null || value.isEmpty) return 'Please enter an amount';
+                if (value == null || value.isEmpty)
+                  return 'Please enter an amount';
                 if (int.tryParse(value) == null || int.parse(value) <= 0) {
                   return 'Please enter a valid amount';
                 }
@@ -267,12 +306,14 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(color: Colors.white))
-                    : const Text("Request Withdrawal", style: TextStyle(fontSize: 16)),
+                    : const Text("Request Withdrawal",
+                        style: TextStyle(fontSize: 16)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF3B82F6),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -283,21 +324,28 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   }
 
   Widget _buildHistoryTab() {
-    if (_currentUser == null) return const Center(child: Text("Please log in."));
+    if (_currentUser == null)
+      return const Center(child: Text("Please log in."));
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-          child: Text("Earnings History", style: GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
+          child: Text("Earnings History",
+              style:
+                  GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
-        _buildHistoryList(_firestoreService.getEarningsHistory(_currentUser!.uid), true),
+        _buildHistoryList(
+            _firestoreService.getEarningsHistory(_currentUser!.uid), true),
         const SizedBox(height: 24),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-          child: Text("Withdrawal History", style: GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
+          child: Text("Withdrawal History",
+              style:
+                  GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
-        _buildHistoryList(_firestoreService.getWithdrawalHistory(_currentUser!.uid), false),
+        _buildHistoryList(
+            _firestoreService.getWithdrawalHistory(_currentUser!.uid), false),
       ],
     );
   }
@@ -327,8 +375,9 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
             final doc = snapshot.data!.docs[index];
             final data = doc.data() as Map<String, dynamic>;
             final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-            final date =
-                timestamp != null ? DateFormat.yMMMd().format(timestamp) : 'N/A';
+            final date = timestamp != null
+                ? DateFormat.yMMMd().format(timestamp)
+                : 'N/A';
 
             return Container(
               decoration: BoxDecoration(
@@ -355,7 +404,9 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
                   style: GoogleFonts.lato(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  isEarning ? "On $date" : "Status: ${data['status']} - On $date",
+                  isEarning
+                      ? "On $date"
+                      : "Status: ${data['status']} - On $date",
                   style: GoogleFonts.lato(),
                 ),
                 trailing: Text(

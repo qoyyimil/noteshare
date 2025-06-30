@@ -158,11 +158,14 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const Spacer(),
               TextButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const CreateNoteScreen()),
-                ),
+                onPressed: () {
+                  searchProvider.clearSearch();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const CreateNoteScreen()),
+                  );
+                },
                 icon:
                     Icon(Icons.edit_outlined, color: subtleTextColor, size: 20),
                 label: Text('Write',
@@ -183,6 +186,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     isLabelVisible: unreadCount > 0,
                     child: IconButton(
                       onPressed: () {
+                        searchProvider.clearSearch();
                         Navigator.push(
                           context,
                           MaterialPageRoute(
