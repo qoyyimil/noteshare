@@ -1,5 +1,3 @@
-// lib/screens/create_note_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noteshare/services/firestore_service.dart';
@@ -42,6 +40,8 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
   static const Color bgColor = Color(0xFFFFFFFF);
+  static const Color inputFillColor = Color(0xFFF9FAFB);
+  static const Color borderColor = Color(0xFFE5E7EB);
 
   // --- State for Note Configuration ---
   bool _isPublic = true;
@@ -61,19 +61,13 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   @override
   void initState() {
     super.initState();
+    _checkEligibility();
     
-    _checkEligibility(); // Check if the user can post premium notes
-    
-    _searchController.addListener(() {
-      setState(() {}); // Update UI when search text changes
-    });
-
     if (isEditing) {
       titleController.text = widget.initialTitle ?? '';
       contentController.text = widget.initialContent ?? '';
       _selectedCategory = widget.initialCategory ?? _categories.first;
       _isPublic = widget.initialIsPublic ?? true;
-      // Note: You might want to fetch and set the initial premium status/price here if editing.
     } else {
       _selectedCategory = _categories.first;
     }
@@ -98,38 +92,6 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
     super.dispose();
   }
 
-  void _onClearSearch() {
-    _searchController.clear();
-  }
-
-  void _onMenuItemSelected(String value, BuildContext context) {
-    switch (value) {
-      case 'profile':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile feature not available yet.')),
-        );
-        break;
-      case 'library':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Library feature not available yet.')),
-        );
-        break;
-      case 'notes':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('My Notes feature not available yet.')),
-        );
-        break;
-      case 'logout':
-        Navigator.pop(context);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('The feature "$value" is not available yet.')),
-        );
-        break;
-    }
-  }
-
   Future<void> _publishNote() async {
     if (titleController.text.trim().isEmpty || contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,6 +110,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
     setState(() => _isPublishing = true);
 
     try {
+      final bool finalIsPremium = _isPublic && _isPremiumNote;
       if (isEditing) {
         await firestoreService.updateNote(
           widget.docID!,
@@ -155,15 +118,20 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
           contentController.text,
           _selectedCategory!,
           _isPublic,
-          isPremium: _isPremiumNote,
-          coinPrice: _selectedPrice ?? 0,
+          isPremium: finalIsPremium,
+          coinPrice: finalIsPremium ? (_selectedPrice ?? 0) : 0,
         );
       } else {
         String fullName = '';
         if (_currentUser != null) {
           try {
             final userDoc = await FirebaseFirestore.instance.collection('users').doc(_currentUser!.uid).get();
-            fullName = userDoc.data()?['fullName'] ?? _currentUser!.email ?? 'Anonymous';
+            final data = userDoc.data();
+            if (data != null) {
+                fullName = (data as Map<String, dynamic>)['fullName'] ?? _currentUser!.email ?? 'Anonymous';
+            } else {
+                fullName = _currentUser!.email ?? 'Anonymous';
+            }
           } catch (e) {
             fullName = _currentUser!.email ?? 'Anonymous';
           }
@@ -177,8 +145,8 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
           fullName: fullName,
           userId: _currentUser!.uid,
           userEmail: _currentUser!.email,
-          isPremium: _isPremiumNote,
-          coinPrice: _selectedPrice ?? 0,
+          isPremium: finalIsPremium,
+          coinPrice: finalIsPremium ? (_selectedPrice ?? 0) : 0,
         );
       }
       if (mounted) Navigator.pop(context);
@@ -205,27 +173,16 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
         sidebarBgColor: bgColor, searchKeyword: '', onClearSearch: () {  },
-        // searchKeyword dan onClearSearch DIHAPUS
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isPublishing ? null : _publishNote,
         backgroundColor: _isPublishing ? Colors.grey : primaryBlue,
         icon: _isPublishing
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
             : const Icon(Icons.send, color: Colors.white),
         label: Text(
           isEditing ? 'Update' : 'Publish',
-          style: GoogleFonts.lato(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: GoogleFonts.lato(fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
       body: Consumer<SearchProvider>(
@@ -237,48 +194,32 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
         },
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700),
+            constraints: const BoxConstraints(maxWidth: 800),
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildConfigurationSection(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   TextField(
                     controller: titleController,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
+                    maxLines: null,
+                    decoration: InputDecoration.collapsed(
                       hintText: 'Your Note Title',
-                      hintStyle: GoogleFonts.lora(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade400,
-                      ),
+                      hintStyle: GoogleFonts.lora(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.grey.shade400),
                     ),
-                    style: GoogleFonts.lora(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
+                    style: GoogleFonts.lora(fontSize: 40, fontWeight: FontWeight.bold, color: textColor),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: contentController,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Start writing your note here...',
-                      hintStyle: GoogleFonts.sourceSerif4(
-                        fontSize: 18,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                    style: GoogleFonts.sourceSerif4(
-                      fontSize: 18,
-                      height: 1.6,
-                      color: textColor,
-                    ),
                     maxLines: null,
+                    decoration: InputDecoration.collapsed(
+                      hintText: 'Start writing your note here...',
+                      hintStyle: GoogleFonts.sourceSerif4(fontSize: 18, color: Colors.grey.shade400),
+                    ),
+                    style: GoogleFonts.sourceSerif4(fontSize: 18, height: 1.6, color: textColor),
                   ),
                   const SizedBox(height: 100),
                 ],
@@ -291,110 +232,112 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   }
 
    Widget _buildConfigurationSection() {
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      spreadRadius: 1,
-                      blurRadius: 7,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedCategory,
-                    isExpanded: true,
-                    items: _categories
-                        .map((String category) => DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category, style: GoogleFonts.lato())))
-                        .toList(),
-                    onChanged: (newValue) =>
-                        setState(() => _selectedCategory = newValue),
-                    icon: const Icon(Icons.arrow_drop_down, color: subtleTextColor),
-                    dropdownColor: Colors.white,
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: inputFillColor,
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    hintText: 'Category',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
+                  items: _categories.map((String category) => DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category, style: GoogleFonts.lato())))
+                      .toList(),
+                  onChanged: (newValue) => setState(() => _selectedCategory = newValue),
                 ),
               ),
-            ),
-            const SizedBox(width: 24),
-            Text('Public', style: GoogleFonts.lato(color: subtleTextColor)),
-            const SizedBox(width: 8),
-            Switch(
-              value: _isPublic,
-              onChanged: (value) => setState(() => _isPublic = value),
-              activeColor: primaryBlue,
-            ),
-          ],
-        ),
-        if (_canPostPremium) ...[
-          const Divider(height: 24),
-          Row(
-            children: [
+              const SizedBox(width: 16),
+              Text('Public', style: GoogleFonts.lato(color: subtleTextColor, fontSize: 16)),
               const SizedBox(width: 8),
-              const Icon(Icons.workspace_premium_outlined, color: Colors.amber),
-              const SizedBox(width: 8),
-              Text("Set as Premium Note", style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
-              const Spacer(),
               Switch(
-                value: _isPremiumNote,
-                onChanged: (value) => setState(() => _isPremiumNote = value),
-                activeColor: Colors.amber,
+                value: _isPublic,
+                onChanged: (value) {
+                  setState(() {
+                    _isPublic = value;
+                    if (!value) {
+                      _isPremiumNote = false;
+                    }
+                  });
+                },
+                activeColor: primaryBlue,
               ),
             ],
           ),
-          if (_isPremiumNote)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.15),
-                      spreadRadius: 1,
-                      blurRadius: 7,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+          
+          if (_canPostPremium) ...[
+            const Divider(height: 24),
+            // --- PERUBAHAN UTAMA: MENGHAPUS EXPANSIONTILE ---
+            Row(
+              children: [
+                Icon(
+                  Icons.workspace_premium_outlined, 
+                  color: _isPublic ? Colors.amber.shade700 : Colors.grey,
                 ),
+                const SizedBox(width: 12),
+                Text(
+                  "Set as Premium Note", 
+                  style: GoogleFonts.lato(
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold,
+                    color: _isPublic ? textColor : Colors.grey,
+                  ),
+                ),
+                const Spacer(),
+                Switch(
+                  value: _isPremiumNote,
+                  onChanged: _isPublic
+                    ? (value) => setState(() => _isPremiumNote = value)
+                    : null,
+                  activeColor: Colors.amber,
+                ),
+              ],
+            ),
+            // Dropdown harga akan muncul jika premium diaktifkan
+            if (_isPremiumNote)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
                 child: DropdownButtonFormField<int>(
                   value: _selectedPrice,
-                  items: _coinPrices
-                      .map((price) => DropdownMenuItem<int>(
-                          value: price, child: Text("$price Coins")))
-                      .toList(),
+                  isExpanded: true,
+                  items: _coinPrices.map((price) => DropdownMenuItem<int>(
+                    value: price, 
+                    child: Text("$price Coins", style: GoogleFonts.lato()))
+                  ).toList(),
                   onChanged: (value) => setState(() => _selectedPrice = value),
-                  // --- PERBAIKAN DI SINI ---
-                  dropdownColor: Colors.white, // Menetapkan warna background menu saat dibuka
                   decoration: InputDecoration(
-                    labelText: "Note Price",
-                    labelStyle: TextStyle(color: textColor),
+                    labelText: "Price",
+                    prefixIcon: const Icon(Icons.monetization_on_outlined, color: subtleTextColor, size: 20),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
                   ),
                 ),
               ),
-            )
-        ]
-      ],
+          ]
+        ],
+      ),
     );
   }
 }
