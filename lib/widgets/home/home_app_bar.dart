@@ -6,7 +6,6 @@ import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/screens/creator_earnings_screen.dart';
 import 'package:noteshare/screens/home_screen.dart';
 import 'package:noteshare/screens/login_screen.dart';
-import 'package:noteshare/screens/my_bookmarks_screen.dart';
 import 'package:noteshare/screens/my_coins_screen.dart';
 import 'package:noteshare/screens/my_notes_screen.dart';
 import 'package:noteshare/screens/notifications_screen.dart';
@@ -41,11 +40,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ProfilePage()),
-      );
-    } else if (value == 'library') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const MyBookmarksScreen()),
       );
     } else if (value == 'notes') {
       Navigator.push(
@@ -246,16 +240,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                             child: ListTile(
                                 leading: Icon(Icons.person_outline),
                                 title: Text('Profile'))),
-                        const PopupMenuItem<String>(
-                            value: 'library',
-                            child: ListTile(
-                                leading: Icon(Icons.bookmark_border),
-                                title: Text('Library'))),
-                        const PopupMenuItem<String>(
-                            value: 'notes',
-                            child: ListTile(
-                                leading: Icon(Icons.note_alt_outlined),
-                                title: Text('My Notes'))),
                         const PopupMenuItem<String>(
                             value: 'stats',
                             child: ListTile(

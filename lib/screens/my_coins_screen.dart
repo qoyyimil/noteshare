@@ -35,7 +35,8 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
           barrierDismissible: false,
           builder: (dialogContext) => SuccessDialog(
             title: "Purchase Successful!",
-            description: "You have successfully added $coinsToAdd coins to your wallet.",
+            description:
+                "You have successfully added $coinsToAdd coins to your wallet.",
             buttonText: "Awesome!",
             onOkPressed: () => Navigator.of(dialogContext).pop(),
           ),
@@ -44,7 +45,9 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to process: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to process: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -53,11 +56,41 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
   }
 
   final List<Map<String, dynamic>> coinPackages = [
-    {'coins': 50, 'price': 8000, 'bonus': 0, 'color': Colors.grey.shade400, 'label': null},
-    {'coins': 100, 'price': 16000, 'bonus': 5, 'color': Colors.blue.shade300, 'label': null},
-    {'coins': 300, 'price': 49000, 'bonus': 30, 'color': Colors.green.shade400, 'label': 'Popular'},
-    {'coins': 500, 'price': 79000, 'bonus': 75, 'color': Colors.purple.shade300, 'label': null},
-    {'coins': 1000, 'price': 159000, 'bonus': 200, 'color': Colors.orange.shade400, 'label': 'Best Value'},
+    {
+      'coins': 50,
+      'price': 8000,
+      'bonus': 0,
+      'color': Colors.grey.shade400,
+      'label': null
+    },
+    {
+      'coins': 100,
+      'price': 16000,
+      'bonus': 5,
+      'color': Colors.blue.shade300,
+      'label': null
+    },
+    {
+      'coins': 300,
+      'price': 49000,
+      'bonus': 30,
+      'color': Colors.green.shade400,
+      'label': 'Popular'
+    },
+    {
+      'coins': 500,
+      'price': 79000,
+      'bonus': 75,
+      'color': Colors.purple.shade300,
+      'label': null
+    },
+    {
+      'coins': 1000,
+      'price': 159000,
+      'bonus': 200,
+      'color': Colors.orange.shade400,
+      'label': 'Best Value'
+    },
   ];
 
   @override
@@ -69,7 +102,7 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
     if (_currentUser == null) {
       return const Scaffold(body: Center(child: Text("Please log in")));
     }
-    
+
     return Scaffold(
       appBar: HomeAppBar(
         searchController: TextEditingController(),
@@ -109,10 +142,14 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
                         Expanded(
                           flex: 1,
                           child: StreamBuilder<DocumentSnapshot>(
-                            stream: _firestoreService.getUserStream(_currentUser!.uid),
+                            stream: _firestoreService
+                                .getUserStream(_currentUser!.uid),
                             builder: (context, snapshot) {
-                              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                              final userData = snapshot.data!.data() as Map<String, dynamic>;
+                              if (!snapshot.hasData)
+                                return const Center(
+                                    child: CircularProgressIndicator());
+                              final userData =
+                                  snapshot.data!.data() as Map<String, dynamic>;
                               final int coins = userData['coins'] ?? 0;
                               return _buildBalanceDisplay(coins, primaryBlue);
                             },
@@ -121,22 +158,26 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
                         const VerticalDivider(
                           color: Color(0xFFE5E7EB),
                           thickness: 1,
-                          width: 64,  
+                          width: 256,
                         ),
                         Expanded(
                           flex: 2,
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center, 
+                            mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 "Out of Coins? Choose a Package",
-                                style: GoogleFonts.lato(fontSize: 24, fontWeight: FontWeight.bold),
+                                style: GoogleFonts.lato(
+                                    fontSize: 24, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 "Use coins to purchase paid note content",
-                                style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.normal, color: subtleTextColor),
+                                style: GoogleFonts.lato(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.normal,
+                                    color: subtleTextColor),
                               ),
                               const SizedBox(height: 20),
                               _buildTopUpGrid(),
@@ -156,16 +197,19 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.account_balance_wallet_outlined, size: 80, color: primaryBlue.withOpacity(0.8)),
+        Icon(Icons.account_balance_wallet_outlined,
+            size: 80, color: primaryBlue.withOpacity(0.8)),
         const SizedBox(height: 24),
-        Text("Your Current Balance", style: GoogleFonts.lato(fontSize: 18, color: Colors.grey.shade700)),
+        Text("Your Current Balance",
+            style: GoogleFonts.lato(fontSize: 18, color: Colors.grey.shade700)),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               NumberFormat.decimalPattern('en_US').format(coins),
-              style: GoogleFonts.lato(fontSize: 48, fontWeight: FontWeight.bold),
+              style:
+                  GoogleFonts.lato(fontSize: 48, fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 8),
             Icon(Icons.monetization_on, color: Colors.amber.shade600, size: 40),
@@ -224,15 +268,25 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center, 
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(Icons.monetization_on, size: 32, color: color ?? Colors.amber),
+                    Icon(Icons.monetization_on,
+                        size: 32, color: color ?? Colors.amber),
                     const SizedBox(height: 12),
-                    Text('$coins Coins', style: GoogleFonts.lato(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('$coins Coins',
+                        style: GoogleFonts.lato(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
                     if (bonus > 0)
-                      Text('+ $bonus Bonus!', style: GoogleFonts.lato(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w600)),
+                      Text('+ $bonus Bonus!',
+                          style: GoogleFonts.lato(
+                              fontSize: 12,
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.w600)),
                     const Spacer(),
-                    Text('Rp ${NumberFormat.decimalPattern('id_ID').format(price)}', style: GoogleFonts.lato(fontSize: 14, color: Colors.grey.shade700)),
+                    Text(
+                        'Rp ${NumberFormat.decimalPattern('id_ID').format(price)}',
+                        style: GoogleFonts.lato(
+                            fontSize: 14, color: Colors.grey.shade700)),
                   ],
                 ),
               ),
@@ -242,15 +296,21 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
                 top: 0,
                 right: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: label == 'Popular' ? Colors.orangeAccent : Colors.redAccent,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                    )
-                  ),
-                  child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                      color: label == 'Popular'
+                          ? Colors.orangeAccent
+                          : Colors.redAccent,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(12),
+                        bottomLeft: Radius.circular(12),
+                      )),
+                  child: Text(label,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10)),
                 ),
               ),
           ],

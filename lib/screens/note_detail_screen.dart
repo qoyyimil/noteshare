@@ -119,16 +119,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           const SnackBar(content: Text('Profile feature not available yet.')),
         );
         break;
-      case 'library':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Library feature not available yet.')),
-        );
-        break;
-      case 'notes':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('My Notes feature not available yet.')),
-        );
-        break;
       case 'logout':
         Navigator.pop(context);
         break;

@@ -25,9 +25,9 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController searchController = TextEditingController();
 
   final FirestoreService _firestoreService = FirestoreService();
-  String _selectedTab = 'Notes';
-  final List<String> _tabs = ['Notes', 'Bookmarks'];
-  
+  String _selectedTab = 'My Notes';
+  final List<String> _tabs = ['My Notes', 'Bookmarks'];
+
   static const Color primaryBlue = Color(0xFF3B82F6);
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
@@ -55,7 +55,8 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildNotesList() {
-    if (currentUser == null) return const Center(child: Text("User not logged in."));
+    if (currentUser == null)
+      return const Center(child: Text("User not logged in."));
     return StreamBuilder<QuerySnapshot>(
       stream: _firestoreService.getNotesByOwner(currentUser!.uid),
       builder: (context, snapshot) {
@@ -63,7 +64,8 @@ class _ProfilePageState extends State<ProfilePage> {
           return const Center(child: CircularProgressIndicator());
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Padding(
+          return const Center(
+              child: Padding(
             padding: EdgeInsets.all(16.0),
             child: Text("You haven't created any notes yet."),
           ));
@@ -74,13 +76,46 @@ class _ProfilePageState extends State<ProfilePage> {
           itemCount: notes.length,
           itemBuilder: (context, i) {
             final doc = notes[i];
-            return NoteCard(
-              docId: doc.id,
-              data: doc.data() as Map<String, dynamic>,
-              firestoreService: _firestoreService,
-              primaryBlue: primaryBlue,
-              textColor: textColor,
-              subtleTextColor: subtleTextColor,
+            final data = doc.data() as Map<String, dynamic>;
+            final bool isPublic = data['isPublic'] ?? false;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Status Public/Private
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 4),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color:
+                          isPublic ? Colors.blue.shade50 : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isPublic ? "Public" : "Private",
+                      style: TextStyle(
+                        color: isPublic
+                            ? Colors.blue.shade800
+                            : Colors.grey.shade800,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                NoteCard(
+                  docId: doc.id,
+                  data: data,
+                  firestoreService: _firestoreService,
+                  primaryBlue: primaryBlue,
+                  textColor: textColor,
+                  subtleTextColor: subtleTextColor,
+                ),
+                const SizedBox(height: 16),
+              ],
             );
           },
         );
@@ -96,7 +131,8 @@ class _ProfilePageState extends State<ProfilePage> {
           return const Center(child: CircularProgressIndicator());
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Padding(
+          return const Center(
+              child: Padding(
             padding: EdgeInsets.all(16.0),
             child: Text("You haven't bookmarked any notes yet."),
           ));
@@ -112,7 +148,7 @@ class _ProfilePageState extends State<ProfilePage> {
               docId: docId,
               data: noteData,
               firestoreService: _firestoreService,
-              isBookmarked: true, 
+              isBookmarked: true,
               primaryBlue: primaryBlue,
               textColor: textColor,
               subtleTextColor: subtleTextColor,
@@ -135,7 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
         subtleTextColor: subtleTextColor,
         sidebarBgColor: sidebarBgColor,
         searchKeyword: '',
-        onClearSearch: () { },
+        onClearSearch: () {},
       ),
       body: Consumer<SearchProvider>(
         builder: (context, searchProvider, child) {
@@ -177,7 +213,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ],
     );
   }
-  
+
   // --- PERUBAHAN DI SINI ---
   Widget _buildNotesSection() {
     return Column(
@@ -199,14 +235,16 @@ class _ProfilePageState extends State<ProfilePage> {
           categories: _tabs,
           selectedCategory: _selectedTab,
           onCategorySelected: (tab) {
-            setState(() { _selectedTab = tab; });
+            setState(() {
+              _selectedTab = tab;
+            });
           },
           primaryBlue: primaryBlue,
           subtleTextColor: subtleTextColor,
         ),
         const Divider(height: 1, color: borderColor),
         Expanded(
-          child: _selectedTab == 'Notes'
+          child: _selectedTab == 'My Notes'
               ? _buildNotesList()
               : _buildBookmarksList(),
         ),
@@ -227,7 +265,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildProfileHeader() {
     final String fullName = userData?['fullName'] ?? 'User';
-    final String displayLetter = fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
+    final String displayLetter =
+        fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
 
     return Container(
       padding: const EdgeInsets.all(32),
@@ -241,12 +280,17 @@ class _ProfilePageState extends State<ProfilePage> {
           CircleAvatar(
             radius: 48,
             backgroundColor: primaryBlue,
-            child: Text(displayLetter, style: const TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(displayLetter,
+                style: const TextStyle(
+                    fontSize: 40,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 16),
           Text(
             fullName,
-            style: GoogleFonts.lora(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
+            style: GoogleFonts.lora(
+                fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -255,13 +299,15 @@ class _ProfilePageState extends State<ProfilePage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const EditProfilePage()),
+                  MaterialPageRoute(
+                      builder: (context) => const EditProfilePage()),
                 ).then((_) => _fetchUserData());
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
               child: const Text('Edit Profile'),
@@ -282,7 +328,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildAboutMeCard() {
-     return Container(
+    return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -293,9 +339,13 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('About Me', style: GoogleFonts.lora(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+          Text('About Me',
+              style: GoogleFonts.lora(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
           const SizedBox(height: 12),
-          Text(userData?['about'] ?? "Belum ada deskripsi tentang saya.", style: GoogleFonts.lato(fontSize: 15, color: subtleTextColor, height: 1.5)),
+          Text(userData?['about'] ?? "Belum ada deskripsi tentang saya.",
+              style: GoogleFonts.lato(
+                  fontSize: 15, color: subtleTextColor, height: 1.5)),
         ],
       ),
     );
@@ -309,7 +359,8 @@ class _ProfilePageState extends State<ProfilePage> {
           .collection(isFollowers ? 'followers' : 'following')
           .snapshots(),
       builder: (context, snapshot) {
-        return _buildStatItem(snapshot.data?.docs.length ?? 0, isFollowers ? 'Followers' : 'Following');
+        return _buildStatItem(snapshot.data?.docs.length ?? 0,
+            isFollowers ? 'Followers' : 'Following');
       },
     );
   }
@@ -319,9 +370,11 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Text(
           count.toString(),
-          style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
+          style: GoogleFonts.lora(
+              fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
         ),
-        Text(label, style: GoogleFonts.lato(fontSize: 14, color: subtleTextColor)),
+        Text(label,
+            style: GoogleFonts.lato(fontSize: 14, color: subtleTextColor)),
       ],
     );
   }
