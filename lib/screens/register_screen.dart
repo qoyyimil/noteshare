@@ -31,6 +31,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _phoneError;
 
   final List<String> _educationLevels = [
+    'Elementary School',
+    'Middle School',
     'High School',
     'College Student',
     'General'
@@ -214,6 +216,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'phoneNumber': phoneNumber,
       'educationLevel': educationLevel,
       'createdAt': FieldValue.serverTimestamp(),
+      'coins': 0,
+      'canPostPremium': false,
     });
   }
 
@@ -279,7 +283,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Simpan data user ke Firestore
         await _saveUsertoFirestore(
           uid: user.uid,
           firstName: firstNameController.text,
@@ -306,174 +309,180 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
-    Widget registerForm = Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Sign up NoteShare",
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Text("Get your account ready to start sharing notes.",
-                  style: TextStyle(fontSize: 16, color: Colors.grey)),
-              const SizedBox(height: 30),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildTextFormField(
-                          controller: firstNameController,
-                          label: "First Name",
-                          requiredField: true)),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: _buildTextFormField(
-                          controller: lastNameController,
-                          label: "Last Name",
-                          requiredField: true)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildTextFormField(
-                controller: emailController,
-                label: "Email",
-                hint: "john.doe@gmail.com",
-                requiredField: true,
-                errorText: _emailError,
-              ),
-              const SizedBox(height: 16),
-              _buildTextFormField(
-                controller: phoneController,
-                label: "Phone Number",
-                inputType: TextInputType.phone,
-                requiredField: true,
-                errorText: _phoneError,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Text("Education Level",
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const Text(" *", style: TextStyle(color: Colors.red)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _selectedEducationLevel,
-                hint: const Text("Select education level"),
-                items: _educationLevels
-                    .map((String level) => DropdownMenuItem<String>(
-                        value: level, child: Text(level)))
-                    .toList(),
-                onChanged: (newValue) =>
-                    setState(() => _selectedEducationLevel = newValue),
-                decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8))),
-              ),
-              const SizedBox(height: 16),
-              _buildTextFormField(
-                controller: passwordController,
-                label: "Password",
-                obscureText: !_isPasswordVisible,
-                requiredField: true,
-                errorText: _passwordError,
-                suffixIcon: IconButton(
-                  icon: Icon(_isPasswordVisible
-                      ? Icons.visibility_off
-                      : Icons.visibility),
-                  onPressed: () =>
-                      setState(() => _isPasswordVisible = !_isPasswordVisible),
+    // --- PERBAIKAN UI DIMULAI DI SINI ---
+    Widget registerForm = Container(
+      color: Colors.white,
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60), // Menambah padding vertikal
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Sign up NoteShare",
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Text("Get your account ready to start sharing notes.",
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                const SizedBox(height: 30),
+                Row(
+                  children: [
+                    Expanded(
+                        child: _buildTextFormField(
+                            controller: firstNameController,
+                            label: "First Name",
+                            requiredField: true)),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: _buildTextFormField(
+                            controller: lastNameController,
+                            label: "Last Name",
+                            requiredField: true)),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              _buildTextFormField(
-                controller: confirmPasswordController,
-                label: "Confirm Password",
-                obscureText: !_isConfirmPasswordVisible,
-                requiredField: true,
-                suffixIcon: IconButton(
-                  icon: Icon(_isConfirmPasswordVisible
-                      ? Icons.visibility_off
-                      : Icons.visibility),
-                  onPressed: () => setState(() =>
-                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  controller: emailController,
+                  label: "Email",
+                  hint: "john.doe@gmail.com",
+                  requiredField: true,
+                  errorText: _emailError,
                 ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Checkbox(
-                      value: _agreeToTerms,
-                      onChanged: (value) =>
-                          setState(() => _agreeToTerms = value!)),
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: TextStyle(
-                            fontSize: 14, color: Colors.grey.shade700),
-                        children: const [
-                          TextSpan(text: "I agree to all the "),
-                          TextSpan(
-                              text: "Terms",
-                              style: TextStyle(
-                                  color: Colors.blueAccent,
-                                  fontWeight: FontWeight.bold)),
-                          TextSpan(text: " and "),
-                          TextSpan(
-                              text: "Privacy Policies",
-                              style: TextStyle(
-                                  color: Colors.blueAccent,
-                                  fontWeight: FontWeight.bold)),
-                        ],
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  controller: phoneController,
+                  label: "Phone Number",
+                  inputType: TextInputType.phone,
+                  requiredField: true,
+                  errorText: _phoneError,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Text("Education Level",
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(" *", style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _selectedEducationLevel,
+                  hint: const Text("Select education level"),
+                  items: _educationLevels
+                      .map((String level) => DropdownMenuItem<String>(
+                          value: level, child: Text(level)))
+                      .toList(),
+                  onChanged: (newValue) =>
+                      setState(() => _selectedEducationLevel = newValue),
+                  dropdownColor: Colors.white,
+                  decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8))),
+                ),
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  controller: passwordController,
+                  label: "Password",
+                  obscureText: !_isPasswordVisible,
+                  requiredField: true,
+                  errorText: _passwordError,
+                  suffixIcon: IconButton(
+                    icon: Icon(_isPasswordVisible
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: () =>
+                        setState(() => _isPasswordVisible = !_isPasswordVisible),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  controller: confirmPasswordController,
+                  label: "Confirm Password",
+                  obscureText: !_isConfirmPasswordVisible,
+                  requiredField: true,
+                  suffixIcon: IconButton(
+                    icon: Icon(_isConfirmPasswordVisible
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: () => setState(() =>
+                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Checkbox(
+                        value: _agreeToTerms,
+                        onChanged: (value) =>
+                            setState(() => _agreeToTerms = value!)),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                              fontSize: 14, color: Colors.grey.shade700),
+                          children: const [
+                            TextSpan(text: "I agree to all the "),
+                            TextSpan(
+                                text: "Terms",
+                                style: TextStyle(
+                                    color: Colors.blueAccent,
+                                    fontWeight: FontWeight.bold)),
+                            TextSpan(text: " and "),
+                            TextSpan(
+                                text: "Privacy Policies",
+                                style: TextStyle(
+                                    color: Colors.blueAccent,
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: signUp,
-                  style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8))),
-                  child: const Text("Create account",
-                      style: TextStyle(fontSize: 16)),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Already have an account?"),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                      onTap: widget.onTap,
-                      child: const Text("Sign in",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blueAccent))),
-                ],
-              ),
-            ],
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: signUp,
+                    style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8))),
+                    child: const Text("Create account",
+                        style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Already have an account?"),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                        onTap: widget.onTap,
+                        child: const Text("Sign in",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueAccent))),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: isDesktop
           ? Row(children: [
-              Expanded(flex: 2, child: registerForm),
-              const Expanded(flex: 3, child: AuthIllustration())
+              Expanded(flex: 3, child: registerForm),
+              const Expanded(flex: 4, child: AuthIllustration())
             ])
           : registerForm,
     );

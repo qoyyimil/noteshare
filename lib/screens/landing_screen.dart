@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:noteshare/auth/login_or_register.dart';
 
 class LandingScreen extends StatelessWidget {
-  const LandingScreen({super.key,});
+  const LandingScreen({super.key});
 
   void _navigateToAuth(BuildContext context, {required bool isInitialLogin}) {
     Navigator.push(
@@ -16,9 +16,9 @@ class LandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 768;
-    // final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
+      backgroundColor: Colors.white, // Menetapkan background putih
       body: SafeArea(
         child: Column(
           children: [
@@ -29,7 +29,7 @@ class LandingScreen extends StatelessWidget {
                 children: [
                   Image.asset(
                     'assets/Logo.png',
-                    height: 24, // Atur tinggi logo sesuai kebutuhan
+                    height: 24,
                   ),
                   if (isDesktop)
                     Row(
@@ -74,23 +74,28 @@ class LandingScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             flex: 2,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: _buildLandingContent(context),
+                            // --- PERBAIKAN DI SINI ---
+                            // Menambahkan Padding di sisi kiri untuk memberi jarak
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 60.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: _buildLandingContent(context),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 40),
                           Expanded(
                             flex: 3,
-                            child: _buildLandingImage(isDesktop),
+                            child: _buildLandingImage(),
                           ),
                         ],
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildLandingImage(isDesktop),
+                          _buildLandingImage(),
                           const SizedBox(height: 20),
                           ..._buildLandingContent(context),
                         ],
@@ -141,8 +146,7 @@ class LandingScreen extends StatelessWidget {
     ];
   }
 
-  // Helper widget untuk gambar
-  Widget _buildLandingImage(bool isDesktop) {
+  Widget _buildLandingImage() {
     return Image.asset(
       'assets/landing_page.png',
       fit: BoxFit.contain,

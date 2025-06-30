@@ -1,3 +1,5 @@
+// lib/screens/creator_earnings_screen.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -113,16 +115,13 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
           }
           return child!;
         },
-        // MODIFIKASI DIMULAI DI SINI:
-        // Mengembalikan Center dan ConstrainedBox dengan maxWidth yang lebih sesuai
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1100), // Lebar ideal untuk konten utama
+            constraints: const BoxConstraints(maxWidth: 1100),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  // Padding di sini hanya untuk ruang vertikal, karena horizontal sudah diatur oleh Center
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                   child: Text("Creator Earnings", style: GoogleFonts.lora(fontSize: 40, fontWeight: FontWeight.bold, color: textColor)),
                 ),
@@ -160,8 +159,6 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   Widget _buildWithdrawTab() {
     if (_currentUser == null) return const Center(child: Text("Please log in."));
 
-    // Form penarikan tidak perlu membentang selebar 1100px, jadi kita batasi lebarnya di sini
-    // agar lebih mudah dibaca dan diisi.
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 700),
@@ -218,15 +215,31 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
                   children: [
                     Text("Withdrawal Details", style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 20),
-                    DropdownButtonFormField<String>(
-                      value: _selectedMethod,
-                      hint: Text("Select Method", style: GoogleFonts.lato()),
-                      style: GoogleFonts.lato(color: textColor, fontSize: 16),
-                      items: _withdrawalMethods.map((method) =>
-                          DropdownMenuItem(value: method, child: Text(method))).toList(),
-                      onChanged: (value) => setState(() => _selectedMethod = value),
-                      validator: (value) => value == null ? 'Please select a method' : null,
-                      decoration: _inputDecoration(),
+                    // --- PERBAIKAN UI DROPDOWN DI SINI ---
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.15),
+                            spreadRadius: 1,
+                            blurRadius: 7,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedMethod,
+                        hint: Text("Select Method", style: GoogleFonts.lato()),
+                        style: GoogleFonts.lato(color: textColor, fontSize: 16),
+                        items: _withdrawalMethods.map((method) =>
+                            DropdownMenuItem(value: method, child: Text(method))).toList(),
+                        onChanged: (value) => setState(() => _selectedMethod = value),
+                        validator: (value) => value == null ? 'Please select a method' : null,
+                        dropdownColor: Colors.white,
+                        decoration: _inputDecoration(),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -277,11 +290,9 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   Widget _buildHistoryTab() {
     if (_currentUser == null) return const Center(child: Text("Please log in."));
     
-    // Gunakan Row untuk membuat tata letak 2 kolom
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Kolom Pertama: Earnings History
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 24.0),
@@ -290,7 +301,6 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
               children: [
                 Text("Earnings History", style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                // Expanded di dalam Column agar ListView mengisi ruang yang tersedia
                 Expanded(
                   child: _buildHistoryList(_firestoreService.getEarningsHistory(_currentUser!.uid), true),
                 ),
@@ -298,9 +308,7 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
             ),
           ),
         ),
-        // Garis pemisah vertikal antar kolom
         const VerticalDivider(width: 1, thickness: 1, color: borderColor),
-        // Kolom Kedua: Withdrawal History
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 24.0),
@@ -330,8 +338,6 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
           child: Text("No history found.", style: GoogleFonts.lato(color: Colors.grey.shade600)),
         ));
         return ListView.separated(
-          // shrinkWrap: true,
-          // physics: const NeverScrollableScrollPhysics(),
           itemCount: snapshot.data!.docs.length,
           separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (context, index) {
@@ -367,9 +373,15 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
       labelStyle: GoogleFonts.lato(color: subtleTextColor),
       hintStyle: GoogleFonts.lato(color: subtleTextColor),
       filled: true,
-      fillColor: inputFillColor,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+      fillColor: Colors.transparent, // Mengubah warna isian agar border terlihat
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: borderColor),
+      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: primaryBlue, width: 2),
