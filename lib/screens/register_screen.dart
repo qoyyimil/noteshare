@@ -321,7 +321,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Sign up NoteShare",
+                const Text("Sign Up NoteShare",
                     style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 Text("Get your account ready to start sharing notes.",
