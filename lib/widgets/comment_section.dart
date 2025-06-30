@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/delete_confirmation_dialog.dart';
+import 'package:noteshare/widgets/home/public_profile_screen.dart'; // Tambahkan import ini (pastikan pathnya benar)
 
 class CommentSection extends StatefulWidget {
   final String noteId;
@@ -13,7 +14,8 @@ class CommentSection extends StatefulWidget {
   final List<QueryDocumentSnapshot> comments;
 
   /// Tambahan (opsional): onAddComment callback, jika ingin handle dari parent
-  final Future<void> Function(String text, {String? parentCommentId})? onAddComment;
+  final Future<void> Function(String text, {String? parentCommentId})?
+      onAddComment;
 
   const CommentSection({
     super.key,
@@ -80,14 +82,12 @@ class _CommentSectionState extends State<CommentSection> {
         _isLoadingFullName) return;
 
     try {
-      // Jika parent mengoper onAddComment, gunakan itu
       if (widget.onAddComment != null) {
         await widget.onAddComment!(
           _commentController.text.trim(),
           parentCommentId: _replyingToCommentId,
         );
       } else {
-        // Default: gunakan FirestoreService
         await widget.firestoreService.addComment(
           noteId: widget.noteId,
           text: _commentController.text.trim(),
@@ -132,7 +132,8 @@ class _CommentSectionState extends State<CommentSection> {
         onDelete: () async {
           try {
             Navigator.of(context).pop();
-            await widget.firestoreService.deleteComment(widget.noteId, commentId);
+            await widget.firestoreService
+                .deleteComment(widget.noteId, commentId);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Successfully deleted comment'),
@@ -185,8 +186,12 @@ class _CommentSectionState extends State<CommentSection> {
               ..sort((a, b) {
                 final aData = a.data() as Map<String, dynamic>;
                 final bData = b.data() as Map<String, dynamic>;
-                final aTimestamp = (aData['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-                final bTimestamp = (bData['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+                final aTimestamp =
+                    (aData['timestamp'] as Timestamp?)?.toDate() ??
+                        DateTime.now();
+                final bTimestamp =
+                    (bData['timestamp'] as Timestamp?)?.toDate() ??
+                        DateTime.now();
                 return aTimestamp.compareTo(bTimestamp);
               });
             return _buildCommentTree(comment, commentReplies);
@@ -197,7 +202,8 @@ class _CommentSectionState extends State<CommentSection> {
     );
   }
 
-  Widget _buildCommentTree(DocumentSnapshot comment, List<DocumentSnapshot> replies) {
+  Widget _buildCommentTree(
+      DocumentSnapshot comment, List<DocumentSnapshot> replies) {
     return Column(
       children: [
         _buildCommentTile(comment),
@@ -208,7 +214,8 @@ class _CommentSectionState extends State<CommentSection> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: replies.length,
-              itemBuilder: (context, index) => _buildCommentTile(replies[index]),
+              itemBuilder: (context, index) =>
+                  _buildCommentTile(replies[index]),
               separatorBuilder: (context, index) => const SizedBox(height: 16),
             ),
           )
@@ -218,9 +225,8 @@ class _CommentSectionState extends State<CommentSection> {
 
   Widget _buildCommentInputField() {
     final String displayFullName = _currentUserFullName ?? '';
-    final String firstLetter = displayFullName.isNotEmpty
-        ? displayFullName[0].toUpperCase()
-        : 'A';
+    final String firstLetter =
+        displayFullName.isNotEmpty ? displayFullName[0].toUpperCase() : 'A';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,10 +256,12 @@ class _CommentSectionState extends State<CommentSection> {
                 maxLines: null,
                 enabled: !_isLoadingFullName,
                 decoration: InputDecoration(
-                  hintText: _isLoadingFullName ? 'Loading...' : 'Write a comment...',
+                  hintText:
+                      _isLoadingFullName ? 'Loading...' : 'Write a comment...',
                   border: InputBorder.none,
                 ),
-                onChanged: (_) => setState(() {}), // agar tombol Send update state
+                onChanged: (_) =>
+                    setState(() {}), // agar tombol Send update state
               ),
               const Divider(),
               Align(
@@ -264,7 +272,8 @@ class _CommentSectionState extends State<CommentSection> {
                           _currentUserFullName != null)
                       ? _postComment
                       : null,
-                  child: Text('Send', style: GoogleFonts.lato(color: primaryBlue)),
+                  child:
+                      Text('Send', style: GoogleFonts.lato(color: primaryBlue)),
                 ),
               )
             ],
@@ -302,11 +311,23 @@ class _CommentSectionState extends State<CommentSection> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: primaryBlue,
-            child: Text(
-              firstLetter,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+          GestureDetector(
+            onTap: () {
+              if (commentUserId.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PublicProfileScreen(userId: commentUserId),
+                  ),
+                );
+              }
+            },
+            child: CircleAvatar(
+              backgroundColor: primaryBlue,
+              child: Text(
+                firstLetter,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -316,16 +337,31 @@ class _CommentSectionState extends State<CommentSection> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      userFullName,
-                      style: GoogleFonts.lato(
-                          fontSize: 15,
+                    GestureDetector(
+                      onTap: () {
+                        if (commentUserId.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PublicProfileScreen(userId: commentUserId),
+                            ),
+                          );
+                        }
+                      },
+                      child: Text(
+                        userFullName,
+                        style: GoogleFonts.lato(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87),
+                          color: Colors.black87,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    Text('• $formattedTime',
-                        style: GoogleFonts.lato(color: subtleTextColor)),
+                    const SizedBox(width: 10),
+                    Text('•  $formattedTime',
+                        style: GoogleFonts.lato(
+                            color: subtleTextColor, fontSize: 16)),
                     const Spacer(),
                     if (isMyComment)
                       PopupMenuButton<String>(
