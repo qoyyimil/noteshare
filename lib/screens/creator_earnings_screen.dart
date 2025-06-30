@@ -1,5 +1,3 @@
-// lib/screens/creator_earnings_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -25,21 +23,20 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
   final FirestoreService _firestoreService = FirestoreService();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
 
-  // Form Controllers
   final _amountController = TextEditingController();
   final _accountNumberController = TextEditingController();
   String? _selectedMethod;
-  final List<String> _withdrawalMethods = [
-    'BCA',
-    'Mandiri',
-    'GoPay',
-    'OVO',
-    'DANA'
-  ];
+  final List<String> _withdrawalMethods = ['BCA', 'Mandiri', 'GoPay', 'OVO', 'DANA'];
 
   bool _isWithdrawing = false;
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _searchController = TextEditingController();
+
+  static const Color primaryBlue = Color(0xFF3B82F6);
+  static const Color textColor = Color(0xFF1F2937);
+  static const Color subtleTextColor = Color(0xFF6B7280);
+  static const Color borderColor = Color(0xFFE5E7EB);
+  static const Color inputFillColor = Color(0xFFF9FAFB);
 
   @override
   void initState() {
@@ -75,23 +72,18 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
             context: context,
             builder: (ctx) => SuccessDialog(
                   title: "Withdrawal Requested",
-                  description:
-                      "Your request for $amount coins has been submitted and is now pending review.",
+                  description: "Your request for $amount coins has been submitted and is now pending review.",
                   buttonText: "Got it!",
                   onOkPressed: () => Navigator.of(ctx).pop(),
                 ));
         _amountController.clear();
         _accountNumberController.clear();
-        setState(() {
-          _selectedMethod = null;
-        });
+        setState(() => _selectedMethod = null);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Error: ${e.toString()}"),
-              backgroundColor: Colors.red),
+          SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -103,20 +95,16 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryBlue = Color(0xFF3B82F6);
-    const Color subtleTextColor = Color(0xFF6B7280);
-    const Color sidebarBgColor = Color(0xFFF9FAFB);
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: HomeAppBar(
         searchController: _searchController,
-        searchKeyword: context.read<SearchProvider>().searchQuery,
-        onClearSearch: () => context.read<SearchProvider>().clearSearch(),
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: sidebarBgColor,
+        sidebarBgColor: inputFillColor,
+        searchKeyword: '',
+        onClearSearch: () {},
       ),
       body: Consumer<SearchProvider>(
         builder: (context, searchProvider, child) {
@@ -125,227 +113,209 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
           }
           return child!;
         },
-        child: Column(
-          children: [
-            Container(
-              color: Colors.white,
-              child: TabBar(
-                controller: _tabController,
-                labelColor: primaryBlue,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: primaryBlue,
-                tabs: const [
-                  Tab(
-                      icon: Icon(Icons.account_balance_wallet_outlined),
-                      text: "Withdraw"),
-                  Tab(icon: Icon(Icons.history), text: "History"),
-                ],
-              ),
+        // MODIFIKASI DIMULAI DI SINI:
+        // Mengembalikan Center dan ConstrainedBox dengan maxWidth yang lebih sesuai
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100), // Lebar ideal untuk konten utama
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  // Padding di sini hanya untuk ruang vertikal, karena horizontal sudah diatur oleh Center
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  child: Text("Creator Earnings", style: GoogleFonts.lora(fontSize: 40, fontWeight: FontWeight.bold, color: textColor)),
+                ),
+                TabBar(
+                  controller: _tabController,
+                  labelColor: primaryBlue,
+                  unselectedLabelColor: subtleTextColor,
+                  indicatorColor: primaryBlue,
+                  indicatorWeight: 3,
+                  labelStyle: GoogleFonts.lato(fontWeight: FontWeight.bold, fontSize: 16),
+                  unselectedLabelStyle: GoogleFonts.lato(fontSize: 16),
+                  tabs: const [
+                    Tab(text: "Withdraw"),
+                    Tab(text: "History"),
+                  ],
+                ),
+                const Divider(height: 1, color: borderColor),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildWithdrawTab(),
+                      _buildHistoryTab(),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildWithdrawTab(),
-                  _buildHistoryTab(),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // --- UI WIDGET TELAH DIPERBAIKI DI SINI ---
   Widget _buildWithdrawTab() {
-    if (_currentUser == null)
-      return const Center(child: Text("Please log in."));
+    if (_currentUser == null) return const Center(child: Text("Please log in."));
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Current Balance Card
-            StreamBuilder<DocumentSnapshot>(
-              stream: _firestoreService.getUserStream(_currentUser!.uid),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final coins =
-                    (snapshot.data!.data() as Map<String, dynamic>)['coins'] ??
-                        0;
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      Text("Available for Withdrawal",
-                          style: GoogleFonts.lato(
-                              fontSize: 18, color: Colors.blue.shade800)),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.monetization_on,
-                              color: Colors.amber.shade700, size: 40),
-                          const SizedBox(width: 8),
-                          Text(
-                              NumberFormat.decimalPattern('id_ID')
-                                  .format(coins),
-                              style: GoogleFonts.lato(
-                                  fontSize: 42,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade900)),
-                        ],
+    // Form penarikan tidak perlu membentang selebar 1100px, jadi kita batasi lebarnya di sini
+    // agar lebih mudah dibaca dan diisi.
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              StreamBuilder<DocumentSnapshot>(
+                stream: _firestoreService.getUserStream(_currentUser!.uid),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final coins = (snapshot.data!.data() as Map<String, dynamic>)['coins'] ?? 0;
+                  return Container(
+                    padding: const EdgeInsets.all(24),
+                    margin: const EdgeInsets.only(bottom: 32),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text("Available for Withdrawal",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.lato(fontSize: 18, color: Colors.blue.shade800)),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 40),
+                            const SizedBox(width: 8),
+                            Text(NumberFormat.decimalPattern('id_ID').format(coins),
+                                style: GoogleFonts.lato(
+                                    fontSize: 42,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade900)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text("1 Coin = Rp 100",
+                            style: GoogleFonts.lato(fontSize: 14, color: Colors.blue.shade700)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Withdrawal Details", style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 20),
+                    DropdownButtonFormField<String>(
+                      value: _selectedMethod,
+                      hint: Text("Select Method", style: GoogleFonts.lato()),
+                      style: GoogleFonts.lato(color: textColor, fontSize: 16),
+                      items: _withdrawalMethods.map((method) =>
+                          DropdownMenuItem(value: method, child: Text(method))).toList(),
+                      onChanged: (value) => setState(() => _selectedMethod = value),
+                      validator: (value) => value == null ? 'Please select a method' : null,
+                      decoration: _inputDecoration(),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _accountNumberController,
+                      style: GoogleFonts.lato(fontSize: 16),
+                      decoration: _inputDecoration(labelText: "Account / E-Wallet Number"),
+                      keyboardType: TextInputType.number,
+                      validator: (value) => value == null || value.isEmpty ? 'Please enter an account number' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _amountController,
+                      style: GoogleFonts.lato(fontSize: 16),
+                      decoration: _inputDecoration(labelText: "Amount of Coins to Withdraw"),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Please enter an amount';
+                        if (int.tryParse(value) == null || int.parse(value) <= 0) return 'Please enter a valid amount';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isWithdrawing ? null : _handleWithdrawal,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _isWithdrawing
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white))
+                            : Text("Request Withdrawal", style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-
-            // Withdrawal Form
-            Text("Withdrawal Details",
-                style: GoogleFonts.lato(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.15),
-                    spreadRadius: 1,
-                    blurRadius: 7,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: DropdownButtonFormField<String>(
-                value: _selectedMethod,
-                hint: const Text("Select Method"),
-                items: _withdrawalMethods
-                    .map((method) =>
-                        DropdownMenuItem(value: method, child: Text(method)))
-                    .toList(),
-                onChanged: (value) => setState(() => _selectedMethod = value),
-                validator: (value) =>
-                    value == null ? 'Please select a method' : null,
-                // --- PERBAIKAN DI SINI ---
-                dropdownColor: Colors
-                    .white, // Menetapkan warna background menu saat dibuka
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _accountNumberController,
-              decoration: InputDecoration(
-                labelText: "Account / E-Wallet Number",
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) => value == null || value.isEmpty
-                  ? 'Please enter an account number'
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _amountController,
-              decoration: InputDecoration(
-                labelText: "Amount of Coins to Withdraw",
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty)
-                  return 'Please enter an amount';
-                if (int.tryParse(value) == null || int.parse(value) <= 0) {
-                  return 'Please enter a valid amount';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _isWithdrawing ? null : _handleWithdrawal,
-                icon: _isWithdrawing
-                    ? Container()
-                    : const Icon(Icons.send_outlined),
-                label: _isWithdrawing
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(color: Colors.white))
-                    : const Text("Request Withdrawal",
-                        style: TextStyle(fontSize: 16)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildHistoryTab() {
-    if (_currentUser == null)
-      return const Center(child: Text("Please log in."));
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    if (_currentUser == null) return const Center(child: Text("Please log in."));
+    
+    // Gunakan Row untuk membuat tata letak 2 kolom
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-          child: Text("Earnings History",
-              style:
-                  GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
+        // Kolom Pertama: Earnings History
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Earnings History", style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                // Expanded di dalam Column agar ListView mengisi ruang yang tersedia
+                Expanded(
+                  child: _buildHistoryList(_firestoreService.getEarningsHistory(_currentUser!.uid), true),
+                ),
+              ],
+            ),
+          ),
         ),
-        _buildHistoryList(
-            _firestoreService.getEarningsHistory(_currentUser!.uid), true),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-          child: Text("Withdrawal History",
-              style:
-                  GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
+        // Garis pemisah vertikal antar kolom
+        const VerticalDivider(width: 1, thickness: 1, color: borderColor),
+        // Kolom Kedua: Withdrawal History
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Withdrawal History", style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _buildHistoryList(_firestoreService.getWithdrawalHistory(_currentUser!.uid), false),
+                ),
+              ],
+            ),
+          ),
         ),
-        _buildHistoryList(
-            _firestoreService.getWithdrawalHistory(_currentUser!.uid), false),
       ],
     );
   }
@@ -354,75 +324,56 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen>
     return StreamBuilder<QuerySnapshot>(
       stream: stream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-              child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text("No history found.",
-                style: TextStyle(color: Colors.grey.shade600)),
-          ));
-        }
-
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return Center(child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32.0),
+          child: Text("No history found.", style: GoogleFonts.lato(color: Colors.grey.shade600)),
+        ));
         return ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
+          // shrinkWrap: true,
+          // physics: const NeverScrollableScrollPhysics(),
           itemCount: snapshot.data!.docs.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 8),
+          separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final doc = snapshot.data!.docs[index];
             final data = doc.data() as Map<String, dynamic>;
             final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-            final date = timestamp != null
-                ? DateFormat.yMMMd().format(timestamp)
-                : 'N/A';
-
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+            final date = timestamp != null ? DateFormat('d MMM yy, HH:mm').format(timestamp) : 'N/A';
+            return ListTile(
+              contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              leading: Icon(
+                isEarning ? Icons.arrow_downward : Icons.arrow_upward,
+                color: isEarning ? Colors.green : Colors.red,
               ),
-              child: ListTile(
-                leading: Icon(
-                  isEarning ? Icons.arrow_downward : Icons.arrow_upward,
-                  color: isEarning ? Colors.green : Colors.redAccent.shade100,
-                ),
-                title: Text(
-                  isEarning
-                      ? "Sale: ${data['noteTitle'] ?? 'Untitled'}"
-                      : "Withdrawal to ${data['method']}",
-                  style: GoogleFonts.lato(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  isEarning
-                      ? "On $date"
-                      : "Status: ${data['status']} - On $date",
-                  style: GoogleFonts.lato(),
-                ),
-                trailing: Text(
-                  isEarning
-                      ? "+${data['coinsEarned']} Coins"
-                      : "-${data['amount']} Coins",
-                  style: TextStyle(
-                    color: isEarning ? Colors.green : Colors.redAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              title: Text(
+                isEarning ? "From: ${data['noteTitle'] ?? 'Untitled'}" : "To: ${data['method']}",
+                style: GoogleFonts.lato(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(isEarning ? "On $date" : "Status: ${data['status']} - On $date", style: GoogleFonts.lato(fontSize: 12)),
+              trailing: Text(
+                isEarning ? "+${data['coinsEarned']} Coins" : "-${data['amount']} Coins",
+                style: GoogleFonts.lato(color: isEarning ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 15),
               ),
             );
           },
         );
       },
+    );
+  }
+
+  InputDecoration _inputDecoration({String? labelText}) {
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: GoogleFonts.lato(color: subtleTextColor),
+      hintStyle: GoogleFonts.lato(color: subtleTextColor),
+      filled: true,
+      fillColor: inputFillColor,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: primaryBlue, width: 2),
+      ),
     );
   }
 }
