@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:noteshare/widgets/home/category_tabs.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:noteshare/screens/edit_profile.dart';
 import 'package:noteshare/widgets/home/note_card.dart';
@@ -21,72 +23,64 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? userData;
   bool _loading = true;
   final TextEditingController searchController = TextEditingController();
-  String searchKeyword = '';
+
+  final FirestoreService _firestoreService = FirestoreService();
+  String _selectedTab = 'Notes';
+  final List<String> _tabs = ['Notes', 'Bookmarks'];
+  
+  static const Color primaryBlue = Color(0xFF3B82F6);
+  static const Color textColor = Color(0xFF1F2937);
+  static const Color subtleTextColor = Color(0xFF6B7280);
+  static const Color borderColor = Color(0xFFE5E7EB);
+  static const Color sidebarBgColor = Color(0xFFF9FAFB);
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
-    searchController.addListener(() {
-      setState(() {
-        searchKeyword = searchController.text;
-      });
-    });
   }
 
   Future<void> _fetchUserData() async {
+    if (currentUser == null) return;
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(currentUser!.uid)
         .get();
-    setState(() {
-      userData = doc.data();
-      _loading = false;
-    });
+    if (mounted) {
+      setState(() {
+        userData = doc.data();
+        _loading = false;
+      });
+    }
   }
 
   Widget _buildNotesList() {
+    if (currentUser == null) return const Center(child: Text("User not logged in."));
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('notes')
-          .where('ownerId', isEqualTo: currentUser!.uid)
-          .orderBy('timestamp', descending: true)
-          .snapshots(),
+      stream: _firestoreService.getNotesByOwner(currentUser!.uid),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Text("You haven't created any notes yet.");
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text("You haven't created any notes yet."),
+          ));
         }
         final notes = snapshot.data!.docs;
-        final filteredNotes = searchKeyword.isEmpty
-            ? notes
-            : notes.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                final title = (data['title'] ?? '').toString().toLowerCase();
-                final content =
-                    (data['content'] ?? '').toString().toLowerCase();
-                return title.contains(searchKeyword.toLowerCase()) ||
-                    content.contains(searchKeyword.toLowerCase());
-              }).toList();
-
-        return ListView.separated(
-          itemCount: filteredNotes.length,
-          separatorBuilder: (context, i) => const SizedBox(height: 24),
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 24),
+          itemCount: notes.length,
           itemBuilder: (context, i) {
-            final doc = filteredNotes[i];
-            final data = doc.data() as Map<String, dynamic>;
+            final doc = notes[i];
             return NoteCard(
               docId: doc.id,
-              data: data,
-              firestoreService: FirestoreService(),
-              primaryBlue: const Color(0xFF3B82F6),
-              textColor: Colors.black,
-              subtleTextColor: const Color(0xFF6B7280),
+              data: doc.data() as Map<String, dynamic>,
+              firestoreService: _firestoreService,
+              primaryBlue: primaryBlue,
+              textColor: textColor,
+              subtleTextColor: subtleTextColor,
             );
           },
         );
@@ -94,33 +88,36 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildStatColumn(String userId, bool isFollowers) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection(isFollowers ? 'followers' : 'following')
-          .snapshots(),
+  Widget _buildBookmarksList() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _firestoreService.getUserBookmarksStream(),
       builder: (context, snapshot) {
-        final count = snapshot.data?.docs.length ?? 0;
-        return Column(
-          children: [
-            Text(
-              count.toString(),
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            Text(
-              isFollowers ? 'Followers' : 'Following',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black54,
-              ),
-            ),
-          ],
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text("You haven't bookmarked any notes yet."),
+          ));
+        }
+        final bookmarkedNotes = snapshot.data!;
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 24),
+          itemCount: bookmarkedNotes.length,
+          itemBuilder: (context, index) {
+            final noteData = bookmarkedNotes[index];
+            final docId = noteData['id'];
+            return NoteCard(
+              docId: docId,
+              data: noteData,
+              firestoreService: _firestoreService,
+              isBookmarked: true, 
+              primaryBlue: primaryBlue,
+              textColor: textColor,
+              subtleTextColor: subtleTextColor,
+            );
+          },
         );
       },
     );
@@ -128,15 +125,17 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryBlue = Color(0xFF3B82F6);
-
+    final isDesktop = MediaQuery.of(context).size.width > 800;
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: HomeAppBar(
         searchController: searchController,
         currentUser: currentUser,
         primaryBlue: primaryBlue,
-        subtleTextColor: const Color(0xFF6B7280),
-        sidebarBgColor: const Color(0xFFF9FAFB), searchKeyword: '', onClearSearch: () {  },
+        subtleTextColor: subtleTextColor,
+        sidebarBgColor: sidebarBgColor,
+        searchKeyword: '',
+        onClearSearch: () { },
       ),
       body: Consumer<SearchProvider>(
         builder: (context, searchProvider, child) {
@@ -151,119 +150,179 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1200),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // LEFT: My Notes
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                userData?['fullName'] ?? '',
-                                style: const TextStyle(
-                                    fontSize: 40, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 24),
-                              Expanded(
-                                child: _buildNotesList(),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // RIGHT: Sidebar Card
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                margin: const EdgeInsets.only(left: 32),
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const CircleAvatar(
-                                      radius: 40,
-                                      backgroundColor: Colors.grey,
-                                      child: Icon(Icons.person,
-                                          size: 60, color: Colors.white),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const EditProfilePage()),
-                                        ).then((_) => _fetchUserData());
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: primaryBlue,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(20)),
-                                      ),
-                                      child: const Text("Edit Profile"),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      userData?['fullName'] ?? '',
-                                      style: const TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    // Followers & Following sejajar, angka besar, label kecil
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        _buildStatColumn(currentUser!.uid, true),
-                                        const SizedBox(width: 40),
-                                        _buildStatColumn(currentUser!.uid, false),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              const Padding(
-                                padding: EdgeInsets.only(left: 32, bottom: 8),
-                                child: Text("About Me",
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18)),
-                              ),
-                              Container(
-                                margin: const EdgeInsets.only(left: 32),
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  userData?['about'] ?? "",
-                                  style: const TextStyle(fontSize: 15),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                    padding: const EdgeInsets.all(24.0),
+                    child: _buildDesktopLayout(),
                   ),
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 32),
+            child: _buildNotesSection(),
+          ),
+        ),
+        SizedBox(
+          width: 340,
+          child: _buildProfileSidebar(),
+        ),
+      ],
+    );
+  }
+  
+  // --- PERUBAHAN DI SINI ---
+  Widget _buildNotesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // NAMA PENGGUNA DITAMBAHKAN KEMBALI DI ATAS TABS
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 24),
+          child: Text(
+            userData?['fullName'] ?? 'My Notes',
+            style: GoogleFonts.lora(
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+        ),
+        CategoryTabs(
+          categories: _tabs,
+          selectedCategory: _selectedTab,
+          onCategorySelected: (tab) {
+            setState(() { _selectedTab = tab; });
+          },
+          primaryBlue: primaryBlue,
+          subtleTextColor: subtleTextColor,
+        ),
+        const Divider(height: 1, color: borderColor),
+        Expanded(
+          child: _selectedTab == 'Notes'
+              ? _buildNotesList()
+              : _buildBookmarksList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileSidebar() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildProfileHeader(),
+        const SizedBox(height: 32),
+        _buildAboutMeCard(),
+      ],
+    );
+  }
+
+  Widget _buildProfileHeader() {
+    final String fullName = userData?['fullName'] ?? 'User';
+    final String displayLetter = fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
+
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 48,
+            backgroundColor: primaryBlue,
+            child: Text(displayLetter, style: const TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            fullName,
+            style: GoogleFonts.lora(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: 150,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const EditProfilePage()),
+                ).then((_) => _fetchUserData());
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text('Edit Profile'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildFollowerFollowingCount(isFollowers: true),
+              const SizedBox(width: 32),
+              _buildFollowerFollowingCount(isFollowers: false),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutMeCard() {
+     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('About Me', style: GoogleFonts.lora(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+          const SizedBox(height: 12),
+          Text(userData?['about'] ?? "Belum ada deskripsi tentang saya.", style: GoogleFonts.lato(fontSize: 15, color: subtleTextColor, height: 1.5)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFollowerFollowingCount({required bool isFollowers}) {
+    if (currentUser == null) return const SizedBox.shrink();
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestoreService.users
+          .doc(currentUser!.uid)
+          .collection(isFollowers ? 'followers' : 'following')
+          .snapshots(),
+      builder: (context, snapshot) {
+        return _buildStatItem(snapshot.data?.docs.length ?? 0, isFollowers ? 'Followers' : 'Following');
+      },
+    );
+  }
+
+  Widget _buildStatItem(int count, String label) {
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: GoogleFonts.lora(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
+        ),
+        Text(label, style: GoogleFonts.lato(fontSize: 14, color: subtleTextColor)),
+      ],
     );
   }
 }

@@ -6,9 +6,9 @@ import 'package:intl/intl.dart';
 import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/screens/create_note_screen.dart';
 import 'package:noteshare/screens/edit_profile.dart';
+import 'package:noteshare/screens/my_coins_screen.dart';
 import 'package:noteshare/screens/profile.dart';
 import 'package:noteshare/widgets/home/public_profile_screen.dart';
-import 'package:noteshare/screens/top_up_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/comment_section.dart';
 import 'package:noteshare/widgets/delete_confirmation_dialog.dart';
@@ -147,13 +147,13 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: Colors.white,
       appBar: HomeAppBar(
         searchController: _searchController,
         currentUser: _currentUser,
         primaryBlue: primaryBlue,
         subtleTextColor: subtleTextColor,
-        sidebarBgColor: backgroundColor, searchKeyword: '',
+        sidebarBgColor: Colors.white, searchKeyword: '',
         onClearSearch: () {},
         // searchKeyword dan onClearSearch DIHAPUS
       ),
@@ -298,7 +298,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                         context,
                                         MaterialPageRoute(
                                             builder: (context) =>
-                                                const TopUpScreen()));
+                                                const MyCoinsScreen()));
                                   },
                                 ),
                               ],

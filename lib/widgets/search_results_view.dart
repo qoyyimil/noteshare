@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:noteshare/providers/search_provider.dart';
+import 'package:noteshare/screens/my_coins_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 import 'package:noteshare/widgets/home/note_card.dart';
 import 'package:noteshare/widgets/home/people_card.dart';
@@ -9,7 +10,6 @@ import 'package:noteshare/widgets/home/search_tabs.dart';
 import 'package:provider/provider.dart';
 import 'package:noteshare/widgets/home/public_profile_screen.dart';
 import 'package:noteshare/screens/note_detail_screen.dart';
-import 'package:noteshare/screens/top_up_screen.dart';
 
 class SearchResultsView extends StatelessWidget {
   const SearchResultsView({super.key});
@@ -66,7 +66,7 @@ class SearchResultsView extends StatelessWidget {
                           Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => const TopUpScreen()));
+                                  builder: (context) => const MyCoinsScreen()));
                         },
                       ),
                     ],
@@ -105,6 +105,7 @@ class SearchResultsView extends StatelessWidget {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final searchProvider = Provider.of<SearchProvider>(context);
@@ -112,30 +113,34 @@ class SearchResultsView extends StatelessWidget {
     const Color textColor = Color(0xFF1F2937);
     const Color subtleTextColor = Color(0xFF6B7280);
 
-    return Column(
-      children: [
-        SearchTabs(
-          activeSearchTab: searchProvider.activeTab,
-          onSearchTabSelected: (tab) {
-            Provider.of<SearchProvider>(context, listen: false)
-                .setActiveTab(tab);
-          },
-          primaryBlue: primaryBlue,
-          subtleTextColor: subtleTextColor,
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 1200),
+        child: Column(
+          children: [
+            SearchTabs(
+              activeSearchTab: searchProvider.activeTab,
+              onSearchTabSelected: (tab) {
+                Provider.of<SearchProvider>(context, listen: false)
+                    .setActiveTab(tab);
+              },
+              primaryBlue: primaryBlue,
+              subtleTextColor: subtleTextColor,
+            ),
+            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            Expanded(
+              child: searchProvider.activeTab == 'Note'
+                  ? _buildSearchNotesList(searchProvider.searchQuery,
+                      FirestoreService(), primaryBlue, textColor, subtleTextColor)
+                  : _buildSearchPeopleList(searchProvider.searchQuery,
+                      FirestoreService(), primaryBlue, textColor, subtleTextColor),
+            ),
+          ],
         ),
-        const Divider(height: 1, color: Color(0xFFE5E7EB)),
-        Expanded(
-          child: searchProvider.activeTab == 'Note'
-              ? _buildSearchNotesList(searchProvider.searchQuery,
-                  FirestoreService(), primaryBlue, textColor, subtleTextColor)
-              : _buildSearchPeopleList(searchProvider.searchQuery,
-                  FirestoreService(), primaryBlue, textColor, subtleTextColor),
-        ),
-      ],
+      ),
     );
   }
 
-  // Logika dari HomeScreen dipindahkan ke sini
   Widget _buildSearchNotesList(
       String keyword,
       FirestoreService firestoreService,
@@ -170,7 +175,6 @@ class SearchResultsView extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             itemCount: filteredNotes.length,
             itemBuilder: (context, index) {
-              // Definisikan variabel di sini, di dalam scope itemBuilder
               final noteDoc = filteredNotes[index];
               final noteData = noteDoc.data() as Map<String, dynamic>;
 
@@ -217,6 +221,7 @@ class SearchResultsView extends StatelessWidget {
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
+            itemCount: filteredUsers.length,
             itemBuilder: (context, index) {
               final userData =
                   filteredUsers[index].data() as Map<String, dynamic>;
@@ -240,7 +245,6 @@ class SearchResultsView extends StatelessWidget {
                 },
               );
             },
-            itemCount: filteredUsers.length,
           );
         });
   }

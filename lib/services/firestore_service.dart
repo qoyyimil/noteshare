@@ -329,6 +329,16 @@ class FirestoreService {
         .snapshots();
   }
 
+  // =======================================================
+  // --- INI FUNGSI BARU YANG SAYA TAMBAHKAN ---
+  Stream<QuerySnapshot> getNotesByOwner(String userId) {
+    return notes
+        .where('ownerId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+  // =======================================================
+
   Stream<QuerySnapshot> getPublicNotesStream() {
     return notes
         .where('isPublic', isEqualTo: true)

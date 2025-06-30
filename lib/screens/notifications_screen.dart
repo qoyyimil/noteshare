@@ -1,5 +1,3 @@
-// lib/screens/notifications_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:noteshare/providers/search_provider.dart';
 import 'package:noteshare/screens/note_detail_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
+import 'package:noteshare/widgets/home/category_tabs.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:noteshare/widgets/search_results_view.dart';
 import 'package:provider/provider.dart';
@@ -21,9 +20,11 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-  String _selectedFilter = 'All';
   final TextEditingController _searchController = TextEditingController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
+
+  String _selectedFilter = 'All';
+  final List<String> _filters = ['All', 'Likes', 'Comment', 'Follow', 'Purchases'];
 
   @override
   void initState() {
@@ -42,8 +43,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         currentUser: _currentUser,
         primaryBlue: const Color(0xFF3B82F6),
         subtleTextColor: const Color(0xFF6B7280),
-        sidebarBgColor: Colors.white, searchKeyword: '', onClearSearch: () {  },
-        // searchKeyword dan onClearSearch DIHAPUS
+        sidebarBgColor: Colors.white,
+        searchKeyword: '',
+        onClearSearch: () {},
       ),
       body: Consumer<SearchProvider>(
         builder: (context, searchProvider, child) {
@@ -52,138 +54,128 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           }
           return child!;
         },
-        child: StreamBuilder<QuerySnapshot>(
-          stream: _firestoreService.getNotificationsStream(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return _buildEmptyState();
-            }
+        child: Center(
+          child: ConstrainedBox(
+            // --- PERUBAHAN DI SINI: Lebar maksimal diubah menjadi 1200 ---
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestoreService.getNotificationsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return _buildEmptyState();
+                }
 
-            final allNotifs = snapshot.data!.docs;
-            final filteredNotifs = allNotifs.where((doc) {
-              final type = doc['type'] as String;
-              switch (_selectedFilter) {
-                case 'Likes':
-                  return type == 'like';
-                case 'Comment':
-                  return type == 'comment';
-                case 'Follow':
-                  return type == 'follow';
-                case 'Purchases':
-                  return type == 'purchase';
-                case 'All':
-                default:
-                  return true;
-              }
-            }).toList();
+                final allNotifs = snapshot.data!.docs;
+                final filteredNotifs = allNotifs.where((doc) {
+                  final type = doc['type'] as String;
+                  switch (_selectedFilter) {
+                    case 'Likes':
+                      return type == 'like';
+                    case 'Comment':
+                      return type == 'comment';
+                    case 'Follow':
+                      return type == 'follow';
+                    case 'Purchases':
+                      return type == 'purchase';
+                    case 'All':
+                    default:
+                      return true;
+                  }
+                }).toList();
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Notification",
-                    style: GoogleFonts.lato(
-                        fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildFilterTabs(),
-                  const SizedBox(height: 8),
-                  const Divider(),
-                  Expanded(
-                    child: filteredNotifs.isEmpty
-                        ? const Center(child: Text("No notifications in this category."))
-                        : ListView.separated(
-                            padding: const EdgeInsets.only(top: 16),
-                            itemCount: filteredNotifs.length,
-                            itemBuilder: (context, index) {
-                              final data = filteredNotifs[index].data() as Map<String, dynamic>;
-                              return _buildNotificationItem(data, filteredNotifs[index].id);
-                            },
-                            separatorBuilder: (context, index) => const Divider(),
-                          ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildEmptyState() {
-    return Padding(
-       padding: const EdgeInsets.symmetric(horizontal: 24.0),
-       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-             Text(
-              "Notification",
-              style: GoogleFonts.lato(
-                  fontSize: 32, fontWeight: FontWeight.bold),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24.0, left: 16.0, right: 16.0),
+                      child: Text(
+                        "Notification",
+                        style: GoogleFonts.lora(
+                            fontSize: 32, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    CategoryTabs(
+                      categories: _filters,
+                      selectedCategory: _selectedFilter,
+                      onCategorySelected: (filter) {
+                        setState(() {
+                          _selectedFilter = filter;
+                        });
+                      },
+                      primaryBlue: const Color(0xFF3B82F6),
+                      subtleTextColor: Colors.grey.shade600,
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: filteredNotifs.isEmpty
+                          ? const Center(child: Text("No notifications in this category."))
+                          : ListView.separated(
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                              itemCount: filteredNotifs.length,
+                              itemBuilder: (context, index) {
+                                final data = filteredNotifs[index].data() as Map<String, dynamic>;
+                                return _buildNotificationItem(data);
+                              },
+                              separatorBuilder: (context, index) => const Divider(),
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 24),
-            _buildFilterTabs(),
-            const SizedBox(height: 8),
-            const Divider(),
-            const Expanded(
-              child: Center(
-                child: Text("You have no notifications yet.")
-              )
-            ),
-          ],
-        ),
-    );
-  }
-
-  Widget _buildFilterTabs() {
-    // Menambahkan 'Purchases' ke dalam daftar filter
-    return Row(
-      children: ['All', 'Likes', 'Comment', 'Follow', 'Purchases']
-          .map((filter) => _buildFilterButton(filter))
-          .toList(),
-    );
-  }
-
-  Widget _buildFilterButton(String title) {
-    final bool isActive = _selectedFilter == title;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFilter = title;
-        });
-      },
-      child: Padding(
-        padding: const EdgeInsets.only(right: 24.0),
-        child: Text(
-          title,
-          style: GoogleFonts.lato(
-            fontSize: 16,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive ? const Color(0xFF3B82F6) : Colors.grey.shade600,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNotificationItem(Map<String, dynamic> data, String docId) {
+  Widget _buildEmptyState() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+         Padding(
+           padding: const EdgeInsets.only(top: 24.0, left: 16.0, right: 16.0),
+           child: Text(
+              "Notification",
+              style: GoogleFonts.lora(
+                  fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+         ),
+        const SizedBox(height: 16),
+        CategoryTabs(
+          categories: _filters,
+          selectedCategory: _selectedFilter,
+          onCategorySelected: (filter) {
+            setState(() {
+              _selectedFilter = filter;
+            });
+          },
+          primaryBlue: const Color(0xFF3B82F6),
+          subtleTextColor: Colors.grey.shade600,
+        ),
+        const Divider(height: 1),
+        const Expanded(
+            child: Center(
+                child: Text("You have no notifications yet."))),
+      ],
+    );
+  }
+
+  Widget _buildNotificationItem(Map<String, dynamic> data) {
     final type = data['type'];
     final fromUserName = data['fromUserName'] ?? 'Someone';
     final noteTitle = data['noteTitle'] ?? '';
-    final message = data['message'] as String?; // Ambil pesan kustom
+    final message = data['message'] as String?;
     final timestamp = (data['timestamp'] as Timestamp).toDate();
     final bool isRead = data['isRead'] ?? true;
 
     String title;
     String description;
     
-    // Membuat pesan notifikasi yang lebih sesuai
     switch (type) {
       case 'like':
         title = 'Your note received a like';
@@ -197,9 +189,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title = 'You have a new follower';
         description = '$fromUserName started following you.';
         break;
-      case 'purchase': // Penanganan untuk tipe notifikasi baru
+      case 'purchase':
         title = 'Purchase Information';
-        description = message ?? 'There was a transaction related to "$noteTitle".'; // Gunakan pesan kustom
+        description = message ?? 'There was a transaction related to "$noteTitle".';
         break;
       default:
         title = 'New Notification';
@@ -226,28 +218,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             children: [
               Text(
                 title,
-                style: GoogleFonts.lato(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(
                 description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.lato(
-                  fontSize: 14,
-                  color: Colors.grey.shade700,
-                ),
+                style: GoogleFonts.lato(fontSize: 14, color: Colors.grey.shade700),
               ),
               const SizedBox(height: 8),
               Text(
-                DateFormat.yMMMd().add_jm().format(timestamp),
-                style: GoogleFonts.lato(
-                  fontSize: 12,
-                  color: Colors.grey.shade500,
-                ),
+                DateFormat('MMM d, yyyy  HH:mm').format(timestamp),
+                style: GoogleFonts.lato(fontSize: 12, color: Colors.grey.shade500),
               ),
             ],
           ),

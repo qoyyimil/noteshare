@@ -1,12 +1,10 @@
-// lib/widgets/home/note_card.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:noteshare/screens/my_coins_screen.dart';
 import 'package:noteshare/screens/note_detail_screen.dart';
-import 'package:noteshare/screens/top_up_screen.dart';
 import 'package:noteshare/services/firestore_service.dart';
 
 class NoteCard extends StatelessWidget {
@@ -16,7 +14,9 @@ class NoteCard extends StatelessWidget {
   final Color primaryBlue;
   final Color textColor;
   final Color subtleTextColor;
-  final VoidCallback? onTap; 
+  final VoidCallback? onTap;
+  final bool isBookmarked;
+  final bool showBottomBorder;
 
   const NoteCard({
     super.key,
@@ -27,9 +27,10 @@ class NoteCard extends StatelessWidget {
     required this.textColor,
     required this.subtleTextColor,
     this.onTap,
+    this.isBookmarked = false,
+    this.showBottomBorder = true, 
   });
 
-  // --- NEW: LOGIC TO HANDLE NOTE TAP ---
   void _handleNoteTap(BuildContext context) {
     final bool isPremium = data['isPremium'] ?? false;
     final User? currentUser = FirebaseAuth.instance.currentUser;
@@ -92,7 +93,7 @@ class NoteCard extends StatelessWidget {
                           child: const Text("Top Up Now"),
                           onPressed: () {
                             Navigator.of(ctx).pop();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const TopUpScreen()));
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const MyCoinsScreen()));
                           },
                         ),
                       ],
@@ -110,6 +111,7 @@ class NoteCard extends StatelessWidget {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     final likesCount = (data['likes'] as List<dynamic>? ?? []).length;
@@ -123,7 +125,11 @@ class NoteCard extends StatelessWidget {
       onTap: onTap ?? () => _handleNoteTap(context),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24.0),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
+        decoration: BoxDecoration(
+          border: showBottomBorder
+              ? const Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))
+              : null,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -187,8 +193,13 @@ class NoteCard extends StatelessWidget {
                         icon: StreamBuilder<bool>(
                           stream: firestoreService.isNoteBookmarked(docId),
                           builder: (context, snapshot) {
-                            final isBookmarked = snapshot.data ?? false;
-                            return Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border, color: subtleTextColor);
+                            final isBookmarkedByStream = snapshot.data ?? false;
+                            final bool displayAsBookmarked = isBookmarked || isBookmarkedByStream;
+
+                            return Icon(
+                              displayAsBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                              color: displayAsBookmarked ? primaryBlue : subtleTextColor,
+                            );
                           },
                         ),
                         onPressed: () => firestoreService.toggleBookmark(docId),
