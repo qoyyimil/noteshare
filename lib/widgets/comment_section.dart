@@ -12,12 +12,16 @@ class CommentSection extends StatefulWidget {
   final User? currentUser;
   final List<QueryDocumentSnapshot> comments;
 
+  /// Tambahan (opsional): onAddComment callback, jika ingin handle dari parent
+  final Future<void> Function(String text, {String? parentCommentId})? onAddComment;
+
   const CommentSection({
     super.key,
     required this.noteId,
     required this.firestoreService,
     required this.currentUser,
     required this.comments,
+    this.onAddComment,
   });
 
   @override
@@ -76,14 +80,22 @@ class _CommentSectionState extends State<CommentSection> {
         _isLoadingFullName) return;
 
     try {
-      await widget.firestoreService.addComment(
-        noteId: widget.noteId,
-        text: _commentController.text.trim(),
-        userId: widget.currentUser!.uid,
-        userFullName: _currentUserFullName!,
-        parentCommentId: _replyingToCommentId,
-      );
-
+      // Jika parent mengoper onAddComment, gunakan itu
+      if (widget.onAddComment != null) {
+        await widget.onAddComment!(
+          _commentController.text.trim(),
+          parentCommentId: _replyingToCommentId,
+        );
+      } else {
+        // Default: gunakan FirestoreService
+        await widget.firestoreService.addComment(
+          noteId: widget.noteId,
+          text: _commentController.text.trim(),
+          userId: widget.currentUser!.uid,
+          fullName: _currentUserFullName!,
+          parentCommentId: _replyingToCommentId,
+        );
+      }
       _commentController.clear();
       setState(() {
         _replyingToCommentId = null;
@@ -208,7 +220,7 @@ class _CommentSectionState extends State<CommentSection> {
     final String displayFullName = _currentUserFullName ?? '';
     final String firstLetter = displayFullName.isNotEmpty
         ? displayFullName[0].toUpperCase()
-        : 'U';
+        : 'A';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:noteshare/auth/auth_service.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:noteshare/providers/search_provider.dart';
@@ -16,7 +18,6 @@ import 'package:noteshare/widgets/report_dialog.dart';
 import 'package:noteshare/widgets/search_results_view.dart';
 import 'package:noteshare/widgets/share_dialog.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
-import 'package:provider/provider.dart';
 
 class NoteDetailScreen extends StatefulWidget {
   final String noteId;
@@ -39,6 +40,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   static const Color textColor = Color(0xFF1F2937);
   static const Color subtleTextColor = Color(0xFF6B7280);
   static const Color backgroundColor = Color(0xFFF9FAFB);
+
+  List<QueryDocumentSnapshot> _comments = [];
 
   @override
   void initState() {
@@ -134,6 +137,27 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     _firestoreService.incrementReadCount(widget.noteId);
   }
 
+  // Handler untuk menambah komentar
+  Future<void> _handleAddComment(String text, {String? parentCommentId}) async {
+    if (_currentUser == null) return;
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(_currentUser!.uid).get();
+    final userData = userDoc.data() as Map<String, dynamic>?;
+    String userFullName = userData?['fullName'] ?? '';
+    if (userFullName.trim().isEmpty) {
+      if (userData?['firstName'] != null && userData?['lastName'] != null) {
+        userFullName = "${userData?['firstName']} ${userData?['lastName']}";
+      }
+    }
+
+    await _firestoreService.addComment(
+      noteId: widget.noteId,
+      text: text,
+      userId: _currentUser!.uid,
+      fullName: userFullName,
+      parentCommentId: parentCommentId,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -145,7 +169,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         subtleTextColor: subtleTextColor,
         sidebarBgColor: Colors.white, searchKeyword: '',
         onClearSearch: () {},
-        // searchKeyword dan onClearSearch DIHAPUS
       ),
       body: Consumer<SearchProvider>(
         builder: (context, searchProvider, child) {
@@ -165,9 +188,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               return const Center(child: Text("Note not found."));
             }
 
-            final data = snapshot.data!.data() as Map<String, dynamic>;
+            final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
             final bool isMyNote = data['ownerId'] == _currentUser?.uid;
-            final bool isPremium = data['isPremium'] ?? false;
+            final bool isPremium = (data['isPremium'] ?? false) == true;
             final List purchasedBy = data['purchasedBy'] ?? [];
             final bool hasPurchased = purchasedBy.contains(_currentUser?.uid);
 
@@ -213,6 +236,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                   firestoreService: _firestoreService,
                                   currentUser: _currentUser,
                                   comments: comments,
+                                  // Di CommentSection pastikan pakai comment['fullName'] sebagai nama
+                                  onAddComment: _handleAddComment,
                                 ),
                               );
                             }),
@@ -262,8 +287,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                       final result = await _firestoreService.purchaseNote(
                           _currentUser!.uid, widget.noteId);
 
-                      // Hanya bertindak jika mounted dan jika hasil TIDAK sukses.
-                      // Jika sukses, StreamBuilder akan menangani pembaruan UI.
                       if (mounted && result != "Purchase successful!") {
                         setState(() => _isPurchasing = false);
 
@@ -295,7 +318,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                             ),
                           );
                         } else {
-                          // Menampilkan error lain yang mungkin dikembalikan oleh service
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                                 content: Text(result),
@@ -304,7 +326,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                         }
                       }
                     } catch (e) {
-                      // Menangkap semua jenis error (exception) dari proses pembelian
                       if (mounted) {
                         setState(() => _isPurchasing = false);
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -339,7 +360,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
-  // --- Other existing build methods (_buildNoteTitle, etc.) ---
   Widget _buildNoteTitle(Map<String, dynamic> data) {
     return Text(
       data['title'] ?? 'Untitled',
@@ -358,18 +378,15 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     final String userFullName = data['fullName'] ?? 'Anonymous User';
     final String firstLetter =
         userFullName.isNotEmpty ? userFullName[0].toUpperCase() : 'A';
-    final String ownerId = data['ownerId'] ?? ''; // Dapatkan ownerId di sini
+    final String ownerId = data['ownerId'] ?? '';
 
     return GestureDetector(
-      // Bungkus dengan GestureDetector
       onTap: () {
         if (_currentUser?.uid != ownerId) {
-          // Hanya navigasi jika bukan profil pengguna saat ini
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PublicProfileScreen(
-                  userId: ownerId), // Navigasi ke PublicProfileScreen
+              builder: (context) => PublicProfileScreen(userId: ownerId),
             ),
           );
         } else {
@@ -416,7 +433,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           const SizedBox(width: 12),
           if (!isMyNote)
             StreamBuilder<bool>(
-              // Pastikan StreamBuilder membungkus ElevatedButton
               stream: _firestoreService.isFollowingUser(ownerId),
               builder: (context, snapshot) {
                 final isFollowing = snapshot.data ?? false;
@@ -427,19 +443,15 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    // --- PERUBAHAN DI SINI ---
                     backgroundColor: isFollowing
                         ? Colors.white
-                        : primaryBlue, // Jika Following -> Putih, jika belum -> primaryBlue
+                        : primaryBlue,
                     foregroundColor: isFollowing
                         ? primaryBlue
-                        : Colors
-                            .white, // Jika Following -> primaryBlue, jika belum -> Putih
-                    side:
-                        isFollowing // Jika Following -> border biru, jika belum -> tidak ada border
-                            ? const BorderSide(color: primaryBlue)
-                            : BorderSide.none,
-                    // --- AKHIR PERUBAHAN ---
+                        : Colors.white,
+                    side: isFollowing
+                        ? const BorderSide(color: primaryBlue)
+                        : BorderSide.none,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20)),
                   ),
@@ -598,15 +610,12 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     final String ownerId = data['ownerId'] ?? '';
 
     return GestureDetector(
-      // Bungkus dengan GestureDetector
       onTap: () {
         if (_currentUser?.uid != ownerId) {
-          // Hanya navigasi jika bukan profil pengguna saat ini
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PublicProfileScreen(
-                  userId: ownerId), // Navigasi ke PublicProfileScreen
+              builder: (context) => PublicProfileScreen(userId: ownerId),
             ),
           );
         } else {

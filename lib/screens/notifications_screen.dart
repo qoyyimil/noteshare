@@ -24,15 +24,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final User? _currentUser = FirebaseAuth.instance.currentUser;
 
   String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Likes', 'Comment', 'Follow', 'Purchases'];
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _firestoreService.markAllNotificationsAsRead();
-    });
-  }
+  final List<String> _filters = [
+    'All',
+    'Likes',
+    'Comment',
+    'Follow',
+    'Purchases'
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +54,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         },
         child: Center(
           child: ConstrainedBox(
-            // --- PERUBAHAN DI SINI: Lebar maksimal diubah menjadi 1200 ---
             constraints: const BoxConstraints(maxWidth: 1200),
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestoreService.getNotificationsStream(),
@@ -69,8 +66,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 }
 
                 final allNotifs = snapshot.data!.docs;
+
+                if (_selectedFilter == 'Purchases') {
+                  final purchaseNotifs = allNotifs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>? ?? {};
+                    return data['type'] == 'purchase';
+                  }).toList();
+
+                  return FutureBuilder<List<QueryDocumentSnapshot>>(
+                    future: _filterOnlyPremiumPurchases(purchaseNotifs),
+                    builder: (context, snap) {
+                      if (!snap.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      return _buildNotificationsList(snap.data!);
+                    },
+                  );
+                }
+
+                // Tab lain tetap
                 final filteredNotifs = allNotifs.where((doc) {
-                  final type = doc['type'] as String;
+                  final data = doc.data() as Map<String, dynamic>? ?? {};
+                  final type = data['type'] as String? ?? '';
                   switch (_selectedFilter) {
                     case 'Likes':
                       return type == 'like';
@@ -78,53 +95,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       return type == 'comment';
                     case 'Follow':
                       return type == 'follow';
-                    case 'Purchases':
-                      return type == 'purchase';
                     case 'All':
                     default:
                       return true;
                   }
                 }).toList();
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 24.0, left: 16.0, right: 16.0),
-                      child: Text(
-                        "Notification",
-                        style: GoogleFonts.lora(
-                            fontSize: 32, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    CategoryTabs(
-                      categories: _filters,
-                      selectedCategory: _selectedFilter,
-                      onCategorySelected: (filter) {
-                        setState(() {
-                          _selectedFilter = filter;
-                        });
-                      },
-                      primaryBlue: const Color(0xFF3B82F6),
-                      subtleTextColor: Colors.grey.shade600,
-                    ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: filteredNotifs.isEmpty
-                          ? const Center(child: Text("No notifications in this category."))
-                          : ListView.separated(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                              itemCount: filteredNotifs.length,
-                              itemBuilder: (context, index) {
-                                final data = filteredNotifs[index].data() as Map<String, dynamic>;
-                                return _buildNotificationItem(data);
-                              },
-                              separatorBuilder: (context, index) => const Divider(),
-                            ),
-                    ),
-                  ],
-                );
+                return _buildNotificationsList(filteredNotifs);
               },
             ),
           ),
@@ -133,18 +110,78 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
+  Future<List<QueryDocumentSnapshot>> _filterOnlyPremiumPurchases(
+      List<QueryDocumentSnapshot> notifs) async {
+    List<QueryDocumentSnapshot> result = [];
+    for (final notif in notifs) {
+      final data = notif.data() as Map<String, dynamic>? ?? {};
+      final noteId = data['noteId'];
+      if (noteId == null) continue;
+      final noteDoc = await FirebaseFirestore.instance
+          .collection('notes')
+          .doc(noteId)
+          .get();
+      if (noteDoc.exists && (noteDoc.data()?['isPremium'] ?? false)) {
+        result.add(notif);
+      }
+    }
+    return result;
+  }
+
+  Widget _buildNotificationsList(List<QueryDocumentSnapshot> filteredNotifs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 24.0, left: 16.0, right: 16.0),
+          child: Text(
+            "Notification",
+            style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 16),
+        CategoryTabs(
+          categories: _filters,
+          selectedCategory: _selectedFilter,
+          onCategorySelected: (filter) {
+            setState(() {
+              _selectedFilter = filter;
+            });
+          },
+          primaryBlue: const Color(0xFF3B82F6),
+          subtleTextColor: Colors.grey.shade600,
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: filteredNotifs.isEmpty
+              ? const Center(child: Text("No notifications in this category."))
+              : ListView.separated(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  itemCount: filteredNotifs.length,
+                  itemBuilder: (context, index) {
+                    final doc = filteredNotifs[index];
+                    final data = doc.data() as Map<String, dynamic>? ?? {};
+                    return _buildNotificationItem(data, notificationId: doc.id);
+                  },
+                  separatorBuilder: (context, index) => const Divider(),
+                ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildEmptyState() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-         Padding(
-           padding: const EdgeInsets.only(top: 24.0, left: 16.0, right: 16.0),
-           child: Text(
-              "Notification",
-              style: GoogleFonts.lora(
-                  fontSize: 32, fontWeight: FontWeight.bold),
-            ),
-         ),
+        Padding(
+          padding: const EdgeInsets.only(top: 24.0, left: 16.0, right: 16.0),
+          child: Text(
+            "Notification",
+            style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+        ),
         const SizedBox(height: 16),
         CategoryTabs(
           categories: _filters,
@@ -159,23 +196,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
         const Divider(height: 1),
         const Expanded(
-            child: Center(
-                child: Text("You have no notifications yet."))),
+            child: Center(child: Text("You have no notifications yet."))),
       ],
     );
   }
 
-  Widget _buildNotificationItem(Map<String, dynamic> data) {
-    final type = data['type'];
-    final fromUserName = data['fromUserName'] ?? 'Someone';
-    final noteTitle = data['noteTitle'] ?? '';
+  Widget _buildNotificationItem(Map<String, dynamic> data,
+      {required String notificationId}) {
+    final type = data['type'] as String? ?? '';
+    final fromUserName =
+        data['fromUserName'] ?? 'Someone'; // <-- REVISI DI SINI
+    final noteTitle = data['noteTitle']?.toString() ?? '';
     final message = data['message'] as String?;
-    final timestamp = (data['timestamp'] as Timestamp).toDate();
+    final Timestamp? timestampObj = data['timestamp'] as Timestamp?;
+    final timestamp = timestampObj?.toDate() ?? DateTime.now();
     final bool isRead = data['isRead'] ?? true;
+    final String? noteId = data['noteId']?.toString();
 
     String title;
     String description;
-    
+
     switch (type) {
       case 'like':
         title = 'Your note received a like';
@@ -191,7 +231,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         break;
       case 'purchase':
         title = 'Purchase Information';
-        description = message ?? 'There was a transaction related to "$noteTitle".';
+        description =
+            message ?? 'There was a transaction related to "$noteTitle".';
         break;
       default:
         title = 'New Notification';
@@ -199,12 +240,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     return InkWell(
-      onTap: () {
-        if (data['noteId'] != null) {
+      onTap: () async {
+        // Tandai sebagai sudah dibaca di Firestore
+        if (!isRead) {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('notifications')
+                .doc(notificationId)
+                .update({'isRead': true});
+          }
+        }
+        // Jika ada noteId, buka NoteDetailScreen (berlaku di semua tab)
+        if (noteId != null && noteId.isNotEmpty) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => NoteDetailScreen(noteId: data['noteId']),
+              builder: (context) => NoteDetailScreen(noteId: noteId),
             ),
           );
         }
@@ -218,19 +272,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             children: [
               Text(
                 title,
-                style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold),
+                style: GoogleFonts.lato(
+                  fontSize: 16,
+                  fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.lato(fontSize: 14, color: Colors.grey.shade700),
+                style: GoogleFonts.lato(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                  fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 DateFormat('MMM d, yyyy  HH:mm').format(timestamp),
-                style: GoogleFonts.lato(fontSize: 12, color: Colors.grey.shade500),
+                style:
+                    GoogleFonts.lato(fontSize: 12, color: Colors.grey.shade500),
               ),
             ],
           ),
