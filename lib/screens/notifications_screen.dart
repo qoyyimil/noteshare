@@ -10,6 +10,7 @@ import 'package:noteshare/widgets/home/category_tabs.dart';
 import 'package:noteshare/widgets/home/home_app_bar.dart';
 import 'package:noteshare/widgets/search_results_view.dart';
 import 'package:provider/provider.dart';
+import 'package:noteshare/screens/public_profile.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -204,8 +205,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _buildNotificationItem(Map<String, dynamic> data,
       {required String notificationId}) {
     final type = data['type'] as String? ?? '';
-    final fromUserName =
-        data['fromUserName'] ?? 'Someone'; // <-- REVISI DI SINI
+    final fromUserName = data['fromUserName'] ?? 'Someone';
+    final fromUserId = data['fromUserId']; // <-- Tambahkan ini
     final noteTitle = data['noteTitle']?.toString() ?? '';
     final message = data['message'] as String?;
     final Timestamp? timestampObj = data['timestamp'] as Timestamp?;
@@ -253,8 +254,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 .update({'isRead': true});
           }
         }
-        // Jika ada noteId, buka NoteDetailScreen (berlaku di semua tab)
-        if (noteId != null && noteId.isNotEmpty) {
+        if (type == 'follow' && fromUserId != null && fromUserId != '') {
+          // Navigasi ke profil user publik (user yang follow)
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PublicProfileScreen(
+                userId: fromUserId,
+              ),
+            ),
+          );
+        } else if (noteId != null && noteId.isNotEmpty) {
+          // Navigasi ke detail note untuk like, comment, purchases
           Navigator.push(
             context,
             MaterialPageRoute(
