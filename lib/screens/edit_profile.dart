@@ -29,7 +29,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController educationController = TextEditingController();
 
   String? _selectedEducationLevel;
-  final List<String> _educationLevels = ['High School', 'College Student', 'General'];
+  final List<String> _educationLevels = [
+    'Elementary School',
+    'Middle School',
+    'High School',
+    'College Student',
+    'General'
+  ];
 
   bool _loading = true;
   bool _saving = false;
@@ -271,6 +277,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           value: _selectedEducationLevel,
           decoration: _inputDecoration('Education Level'), 
           hint: const Text('Select education level'),
+          dropdownColor: Colors.white,
           onChanged: (String? newValue) {
             setState(() {
               _selectedEducationLevel = newValue;
